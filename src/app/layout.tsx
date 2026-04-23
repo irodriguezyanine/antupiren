@@ -18,6 +18,20 @@ export const metadata: Metadata = {
   title: "Centro de Eventos Antupirén | Peñalolén",
   description:
     "Matrimonios, eventos corporativos y celebraciones en Peñalolén. Agenda tu visita por WhatsApp.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://eventosantupiren.cl",
+  ),
+  icons: {
+    icon: "/logo-antupiren.png",
+    shortcut: "/logo-antupiren.png",
+    apple: "/logo-antupiren.png",
+  },
+  openGraph: {
+    title: "Centro de Eventos Antupirén | Peñalolén",
+    description:
+      "Matrimonios, eventos corporativos y celebraciones en Peñalolén. Agenda tu visita por WhatsApp.",
+    images: ["/logo-antupiren.png"],
+  },
 };
 
 export default function RootLayout({

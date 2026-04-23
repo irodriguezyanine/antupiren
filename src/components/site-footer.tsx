@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type SiteFooterProps = {
@@ -11,7 +12,16 @@ export function SiteFooter({ instagramUrl, facebookUrl, address }: SiteFooterPro
     <footer className="mt-16 border-t border-amber-100 bg-amber-50/50">
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-10 sm:grid-cols-2 sm:px-6">
         <div>
-          <p className="text-sm font-semibold text-amber-900">Eventos Antupirén</p>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/logo-antupiren.png"
+              alt="Logo Antupirén"
+              width={24}
+              height={24}
+              className="h-6 w-6 object-contain"
+            />
+            <p className="text-sm font-semibold text-amber-900">Eventos Antupirén</p>
+          </div>
           <p className="mt-2 text-sm text-zinc-600">{address}</p>
         </div>
         <div className="text-sm text-zinc-600 sm:text-right">
