@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, MessageCircleMore, X } from "lucide-react";
+import { LockKeyhole, Menu, MessageCircleMore, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,6 +15,7 @@ const links = [
   { href: "/galeria", label: "Galería" },
   { href: "/nosotros", label: "Nosotros" },
   { href: "/contacto", label: "Contacto" },
+  { href: "/admin/login", label: "Admin" },
 ];
 
 export function SiteHeader() {
@@ -54,7 +55,14 @@ export function SiteHeader() {
                   active ? "font-semibold text-amber-900" : "text-zinc-600 hover:text-amber-800"
                 }`}
               >
-                {item.label}
+                {item.href === "/admin/login" ? (
+                  <span className="inline-flex items-center gap-1">
+                    <LockKeyhole size={13} />
+                    {item.label}
+                  </span>
+                ) : (
+                  item.label
+                )}
               </Link>
             );
           })}
@@ -91,7 +99,14 @@ export function SiteHeader() {
                     active ? "bg-amber-100 text-amber-900" : "text-zinc-700 hover:bg-amber-50"
                   }`}
                 >
-                  {item.label}
+                  {item.href === "/admin/login" ? (
+                    <span className="inline-flex items-center gap-2">
+                      <LockKeyhole size={14} />
+                      {item.label}
+                    </span>
+                  ) : (
+                    item.label
+                  )}
                 </Link>
               );
             })}
