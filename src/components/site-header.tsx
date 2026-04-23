@@ -15,7 +15,6 @@ const links = [
   { href: "/galeria", label: "Galería" },
   { href: "/nosotros", label: "Nosotros" },
   { href: "/contacto", label: "Contacto" },
-  { href: "/admin/login", label: "Admin" },
 ];
 
 export function SiteHeader() {
@@ -55,17 +54,18 @@ export function SiteHeader() {
                   active ? "font-semibold text-amber-900" : "text-zinc-600 hover:text-amber-800"
                 }`}
               >
-                {item.href === "/admin/login" ? (
-                  <span className="inline-flex items-center gap-1">
-                    <LockKeyhole size={13} />
-                    {item.label}
-                  </span>
-                ) : (
-                  item.label
-                )}
+                {item.label}
               </Link>
             );
           })}
+          <Link
+            href="/admin"
+            aria-label="Panel administrador"
+            title="Panel administrador"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 transition hover:bg-amber-100"
+          >
+            <LockKeyhole size={14} />
+          </Link>
           <Link
             href="https://wa.me/56965914497"
             target="_blank"
@@ -110,6 +110,16 @@ export function SiteHeader() {
                 </Link>
               );
             })}
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-amber-50"
+            >
+              <span className="inline-flex items-center gap-2">
+                <LockKeyhole size={14} />
+                Panel administrador
+              </span>
+            </Link>
           </div>
         </nav>
       ) : null}

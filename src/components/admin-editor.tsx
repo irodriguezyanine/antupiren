@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { EventCategory, SiteContent } from "@/types/content";
@@ -177,14 +178,22 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           <h1 className="text-2xl font-semibold text-amber-900">Panel Administrador</h1>
           <p className="text-sm text-zinc-600">Gestiona contenido, galería y textos del sitio.</p>
         </div>
-        <form action="/api/admin/logout" method="post">
-          <button
-            type="submit"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/login"
             className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
           >
-            Cerrar sesión
-          </button>
-        </form>
+            Ir a login admin
+          </Link>
+          <form action="/api/admin/logout" method="post">
+            <button
+              type="submit"
+              className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              Cerrar sesión
+            </button>
+          </form>
+        </div>
       </div>
 
       <section className="mb-6 grid gap-4 sm:grid-cols-3">
