@@ -51,3 +51,33 @@ export async function uploadEventImage(
     publicId: result.public_id,
   };
 }
+
+export async function uploadRawJsonContent(
+  jsonContent: string,
+  publicId = "antupiren/site-content",
+): Promise<void> {
+  if (!cloudinaryEnabled) {
+    throw new Error("Cloudinary no está configurado.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "raw",
+        public_id: publicId,
+        format: "json",
+        overwrite: true,
+        invalidate: true,
+      },
+      (error, uploaded) => {
+        if (error || !uploaded) {
+          reject(error ?? new Error("No se pudo subir JSON a Cloudinary."));
+          return;
+        }
+        resolve();
+      },
+    );
+
+    stream.end(Buffer.from(jsonContent, "utf8"));
+  });
+}

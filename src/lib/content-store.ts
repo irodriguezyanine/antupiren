@@ -1,5 +1,6 @@
 import { seedContent } from "@/lib/seed-content";
 import { cloudinaryConfig, cloudinaryEnabled } from "@/lib/cloudinary-config";
+import { uploadRawJsonContent } from "@/lib/cloudinary";
 import type { SiteContent } from "@/types/content";
 
 const CLOUDINARY_CONTENT_PUBLIC_ID = "antupiren/site-content";
@@ -44,42 +45,8 @@ export async function saveSiteContent(nextContent: SiteContent): Promise<void> {
       "Faltan variables de Cloudinary para guardar contenido administrable.",
     );
   }
-
-  const form = new FormData();
-  form.append(
-    "file",
-    new Blob([JSON.stringify(nextContent, null, 2)], {
-      type: "application/json",
-    }),
+  await uploadRawJsonContent(
+    JSON.stringify(nextContent, null, 2),
+    CLOUDINARY_CONTENT_PUBLIC_ID,
   );
-  form.append("resource_type", "raw");
-  form.append("public_id", CLOUDINARY_CONTENT_PUBLIC_ID);
-  form.append("overwrite", "true");
-  form.append("invalidate", "true");
-
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  form.append("timestamp", timestamp);
-  form.append("api_key", cloudinaryConfig?.apiKey as string);
-
-  const params = `invalidate=true&overwrite=true&public_id=${CLOUDINARY_CONTENT_PUBLIC_ID}&timestamp=${timestamp}${cloudinaryConfig?.apiSecret}`;
-  const signature = await crypto.subtle.digest(
-    "SHA-1",
-    new TextEncoder().encode(params),
-  );
-  const signatureHex = Array.from(new Uint8Array(signature))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-
-  form.append("signature", signatureHex);
-
-  const url = `https://api.cloudinary.com/v1_1/${cloudinaryConfig?.cloudName}/raw/upload`;
-  const response = await fetch(url, {
-    method: "POST",
-    body: form,
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`No se pudo guardar contenido en Cloudinary: ${details}`);
-  }
 }
