@@ -2,14 +2,15 @@ import { seedContent } from "@/lib/seed-content";
 import type { SiteContent } from "@/types/content";
 
 const CLOUDINARY_CONTENT_PUBLIC_ID = "antupiren/site-content";
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
 
 const hasCloudinaryConfig =
-  !!process.env.CLOUDINARY_CLOUD_NAME &&
-  !!process.env.CLOUDINARY_API_KEY &&
-  !!process.env.CLOUDINARY_API_SECRET;
+  !!cloudName && !!apiKey && !!apiSecret;
 
 function getRawUrl(publicId: string): string {
-  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${publicId}.json`;
+  return `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}.json`;
 }
 
 async function fetchCloudinaryContent(): Promise<SiteContent | null> {
@@ -62,9 +63,9 @@ export async function saveSiteContent(nextContent: SiteContent): Promise<void> {
 
   const timestamp = Math.floor(Date.now() / 1000).toString();
   form.append("timestamp", timestamp);
-  form.append("api_key", process.env.CLOUDINARY_API_KEY as string);
+  form.append("api_key", apiKey as string);
 
-  const params = `invalidate=true&overwrite=true&public_id=${CLOUDINARY_CONTENT_PUBLIC_ID}&resource_type=raw&timestamp=${timestamp}${process.env.CLOUDINARY_API_SECRET}`;
+  const params = `invalidate=true&overwrite=true&public_id=${CLOUDINARY_CONTENT_PUBLIC_ID}&resource_type=raw&timestamp=${timestamp}${apiSecret}`;
   const signature = await crypto.subtle.digest(
     "SHA-1",
     new TextEncoder().encode(params),
@@ -75,7 +76,7 @@ export async function saveSiteContent(nextContent: SiteContent): Promise<void> {
 
   form.append("signature", signatureHex);
 
-  const url = `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload`;
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`;
   const response = await fetch(url, {
     method: "POST",
     body: form,
