@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   const title = String(formData.get("title") ?? "");
   const description = String(formData.get("description") ?? "");
   const category = String(formData.get("category") ?? "espacio") as EventCategory;
+  const mode = String(formData.get("mode") ?? "gallery");
+  const folder = mode === "card-background" ? "antupiren/cards" : "antupiren/gallery";
 
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, error: "Archivo inválido" }, { status: 400 });
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const uploaded = await uploadEventImage(buffer);
+  const uploaded = await uploadEventImage(buffer, folder);
 
   return NextResponse.json({
     secureUrl: uploaded.secureUrl,
@@ -30,5 +32,6 @@ export async function POST(request: Request) {
     title,
     description,
     category,
+    mode,
   });
 }

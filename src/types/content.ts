@@ -9,6 +9,8 @@ export type EventTypeCard = {
   title: string;
   description: string;
   href: string;
+  backgroundImageUrl?: string;
+  backgroundPublicId?: string;
 };
 
 export type Stat = {

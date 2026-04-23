@@ -23,7 +23,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   );
   const [status, setStatus] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingCard, setUploadingCard] = useState(false);
+  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
+  const [cardModalIndex, setCardModalIndex] = useState<number | null>(null);
 
   const activeTestimonials = useMemo(
     () => content.testimonials.filter((item) => item.enabled).length,
@@ -69,16 +72,17 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     await saveContent(next);
   }
 
-  async function handleUpload(formData: FormData) {
-    setUploading(true);
+  async function handleGalleryUpload(formData: FormData) {
+    setUploadingGallery(true);
     setStatus("");
+    formData.set("mode", "gallery");
 
     const response = await fetch("/api/admin/upload", {
       method: "POST",
       body: formData,
     });
 
-    setUploading(false);
+    setUploadingGallery(false);
 
     if (!response.ok) {
       setStatus("No se pudo subir imagen a Cloudinary.");
@@ -112,7 +116,58 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
 
     setContent(next);
     setJsonDraft(JSON.stringify(next, null, 2));
+    setGalleryModalOpen(false);
     setStatus("Imagen subida. Guarda para publicar cambios.");
+  }
+
+  async function handleCardBackgroundUpload(
+    formData: FormData,
+    cardIndex: number,
+  ) {
+    setUploadingCard(true);
+    setStatus("");
+    formData.set("mode", "card-background");
+
+    const response = await fetch("/api/admin/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    setUploadingCard(false);
+
+    if (!response.ok) {
+      setStatus("No se pudo subir fondo de tarjeta.");
+      return;
+    }
+
+    const uploaded = (await response.json()) as {
+      secureUrl: string;
+      publicId: string;
+    };
+
+    const nextCards = [...content.homeEventTypes];
+    const current = nextCards[cardIndex];
+    if (!current) {
+      setStatus("No se encontró la tarjeta seleccionada.");
+      return;
+    }
+
+    nextCards[cardIndex] = {
+      ...current,
+      backgroundImageUrl: uploaded.secureUrl,
+      backgroundPublicId: uploaded.publicId,
+    };
+
+    const next = {
+      ...content,
+      homeEventTypes: nextCards,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setContent(next);
+    setJsonDraft(JSON.stringify(next, null, 2));
+    setCardModalIndex(null);
+    setStatus("Fondo de tarjeta actualizado. Guarda para publicar.");
   }
 
   return (
@@ -208,56 +263,45 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </article>
 
         <article className="soft-shadow rounded-xl border border-amber-100 bg-white p-5">
-          <h2 className="text-lg font-semibold text-amber-900">Subir foto a galería</h2>
+          <h2 className="text-lg font-semibold text-amber-900">Gestión visual (Cloudinary)</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Sube imagen y asígnala a una categoría. Luego guarda para publicar.
+            Sube fotos en modales y reemplaza fondos de tarjetas del home con estilo catálogo.
           </p>
-          <form
-            className="mt-4 space-y-3"
-            action={async (formData) => {
-              await handleUpload(formData);
-            }}
-          >
-            <input
-              type="text"
-              name="title"
-              required
-              placeholder="Título"
-              className="w-full rounded-lg border border-amber-200 px-3 py-2"
-            />
-            <input
-              type="text"
-              name="description"
-              required
-              placeholder="Descripción"
-              className="w-full rounded-lg border border-amber-200 px-3 py-2"
-            />
-            <select
-              name="category"
-              className="w-full rounded-lg border border-amber-200 px-3 py-2"
-              defaultValue="matrimonios"
-            >
-              {categoryOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <input
-              type="file"
-              name="file"
-              accept="image/*"
-              required
-              className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm"
-            />
+          <div className="mt-4 space-y-4">
             <button
-              type="submit"
-              disabled={uploading}
-              className="rounded-full border border-amber-300 px-5 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+              type="button"
+              onClick={() => setGalleryModalOpen(true)}
+              className="rounded-full border border-amber-300 px-5 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
             >
-              {uploading ? "Subiendo..." : "Subir imagen"}
+              Abrir modal de subida a galería
             </button>
-          </form>
+
+            <div className="space-y-2 rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Fondos de tarjetas home
+              </p>
+              {content.homeEventTypes.map((card, index) => (
+                <div
+                  key={card.title}
+                  className="flex items-center justify-between rounded-lg border border-amber-100 bg-white px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">{card.title}</p>
+                    <p className="text-xs text-zinc-500">
+                      {card.backgroundImageUrl ? "Fondo personalizado" : "Sin fondo personalizado"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCardModalIndex(index)}
+                    className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                  >
+                    Reemplazar fondo
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </article>
       </section>
 
@@ -285,6 +329,113 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           {status ? <p className="text-sm text-zinc-700">{status}</p> : null}
         </div>
       </section>
+
+      {galleryModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-100 bg-white p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-amber-900">Subir foto a galería</h3>
+              <button
+                type="button"
+                onClick={() => setGalleryModalOpen(false)}
+                className="rounded-full border border-amber-300 px-3 py-1 text-xs text-amber-900"
+              >
+                Cerrar
+              </button>
+            </div>
+            <form
+              className="space-y-3"
+              action={async (formData) => {
+                await handleGalleryUpload(formData);
+              }}
+            >
+              <input
+                type="text"
+                name="title"
+                required
+                placeholder="Título"
+                className="w-full rounded-lg border border-amber-200 px-3 py-2"
+              />
+              <input
+                type="text"
+                name="description"
+                required
+                placeholder="Descripción"
+                className="w-full rounded-lg border border-amber-200 px-3 py-2"
+              />
+              <select
+                name="category"
+                className="w-full rounded-lg border border-amber-200 px-3 py-2"
+                defaultValue="matrimonios"
+              >
+                {categoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="file"
+                name="file"
+                accept="image/*"
+                required
+                className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={uploadingGallery}
+                className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+              >
+                {uploadingGallery ? "Subiendo..." : "Subir a Cloudinary"}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {cardModalIndex !== null ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-100 bg-white p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-amber-900">
+                Reemplazar fondo: {content.homeEventTypes[cardModalIndex]?.title}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCardModalIndex(null)}
+                className="rounded-full border border-amber-300 px-3 py-1 text-xs text-amber-900"
+              >
+                Cerrar
+              </button>
+            </div>
+            <form
+              className="space-y-3"
+              action={async (formData) => {
+                if (cardModalIndex === null) return;
+                await handleCardBackgroundUpload(formData, cardModalIndex);
+              }}
+            >
+              <input
+                type="file"
+                name="file"
+                accept="image/*"
+                required
+                className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-zinc-500">
+                Recomendado: imagen horizontal (mínimo 1200px de ancho).
+              </p>
+              <button
+                type="submit"
+                disabled={uploadingCard}
+                className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+              >
+                {uploadingCard ? "Subiendo..." : "Guardar fondo de tarjeta"}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -23,21 +23,29 @@ export const seedContent: SiteContent = {
       title: "Matrimonios",
       description: "Ceremonias y fiestas memorables en un entorno natural único.",
       href: "/matrimonios",
+      backgroundImageUrl:
+        "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=1200&auto=format&fit=crop",
     },
     {
       title: "Eventos corporativos",
       description: "Espacios flexibles para empresas, marcas y equipos.",
       href: "/eventos-corporativos",
+      backgroundImageUrl:
+        "https://images.unsplash.com/photo-1515169067868-5387ec356754?q=80&w=1200&auto=format&fit=crop",
     },
     {
       title: "Celebraciones sociales",
       description: "Cumpleaños, graduaciones, baby showers y celebraciones familiares.",
       href: "/celebraciones-sociales",
+      backgroundImageUrl:
+        "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=80&w=1200&auto=format&fit=crop",
     },
     {
       title: "Activaciones de marca",
       description: "Montajes personalizados para experiencias e impacto de marca.",
       href: "/activaciones-de-marca",
+      backgroundImageUrl:
+        "https://images.unsplash.com/photo-1551818255-e6e10975bc17?q=80&w=1200&auto=format&fit=crop",
     },
   ],
   pages: {
