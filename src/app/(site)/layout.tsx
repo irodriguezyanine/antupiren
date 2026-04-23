@@ -6,6 +6,9 @@ import { WhatsappFloat } from "@/components/whatsapp-float";
 import { getSiteContent } from "@/lib/content-store";
 import { buildWhatsappLink } from "@/lib/site-utils";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   const content = await getSiteContent();
   const whatsappLink = buildWhatsappLink(
