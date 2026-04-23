@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -9,6 +10,16 @@ type AdminEditorProps = {
   initialContent: SiteContent;
 };
 
+type AdminTab =
+  | "inicio"
+  | "secciones"
+  | "tarjetas"
+  | "galeria"
+  | "testimonios"
+  | "contacto";
+
+type PageKey = keyof SiteContent["pages"];
+
 const categoryOptions: EventCategory[] = [
   "matrimonios",
   "corporativos",
@@ -17,13 +28,30 @@ const categoryOptions: EventCategory[] = [
   "espacio",
 ];
 
+const pageLabels: Record<PageKey, string> = {
+  matrimonios: "Matrimonios",
+  corporativos: "Corporativos",
+  sociales: "Sociales",
+  activaciones: "Activaciones",
+  galeria: "Galería",
+  nosotros: "Nosotros",
+  contacto: "Contacto",
+};
+
+const tabs: { id: AdminTab; label: string }[] = [
+  { id: "inicio", label: "Inicio" },
+  { id: "secciones", label: "Secciones" },
+  { id: "tarjetas", label: "Tarjetas Home" },
+  { id: "galeria", label: "Galería" },
+  { id: "testimonios", label: "Testimonios" },
+  { id: "contacto", label: "Contacto" },
+];
+
 export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [content, setContent] = useState<SiteContent>(initialContent);
-  const [jsonDraft, setJsonDraft] = useState(
-    JSON.stringify(initialContent, null, 2),
-  );
   const [status, setStatus] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<AdminTab>("inicio");
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [uploadingCard, setUploadingCard] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
@@ -46,26 +74,18 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
 
     setIsSaving(false);
     if (!response.ok) {
-      setStatus("No se pudo guardar. Revisa configuración de Cloudinary.");
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      setStatus(payload?.error ?? "No se pudo guardar los cambios.");
       return;
     }
 
     setStatus("Cambios guardados correctamente.");
     setContent(next);
-    setJsonDraft(JSON.stringify(next, null, 2));
   }
 
-  async function handleSaveJson() {
-    try {
-      const parsed = JSON.parse(jsonDraft) as SiteContent;
-      parsed.updatedAt = new Date().toISOString();
-      await saveContent(parsed);
-    } catch {
-      setStatus("JSON inválido. Corrige formato antes de guardar.");
-    }
-  }
-
-  async function handleQuickSave() {
+  async function handleSaveAll() {
     const next = {
       ...content,
       updatedAt: new Date().toISOString(),
@@ -119,7 +139,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     };
 
     setContent(next);
-    setJsonDraft(JSON.stringify(next, null, 2));
     setGalleryModalOpen(false);
     setStatus("Imagen subida. Guarda para publicar cambios.");
   }
@@ -172,17 +191,62 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     };
 
     setContent(next);
-    setJsonDraft(JSON.stringify(next, null, 2));
     setCardModalIndex(null);
     setStatus("Fondo de tarjeta actualizado. Guarda para publicar.");
   }
 
+  function updatePage(pageKey: PageKey, field: string, value: string | boolean) {
+    setContent((prev) => ({
+      ...prev,
+      pages: {
+        ...prev.pages,
+        [pageKey]: {
+          ...prev.pages[pageKey],
+          [field]: value,
+        },
+      },
+    }));
+  }
+
+  function addTestimonial() {
+    setContent((prev) => ({
+      ...prev,
+      testimonials: [
+        ...prev.testimonials,
+        {
+          id: crypto.randomUUID(),
+          author: "Nuevo testimonio",
+          role: "Cliente",
+          text: "Escribe aquí la experiencia del cliente.",
+          eventType: "General",
+          enabled: true,
+        },
+      ],
+    }));
+  }
+
+  function removeTestimonial(index: number) {
+    setContent((prev) => ({
+      ...prev,
+      testimonials: prev.testimonials.filter((_, i) => i !== index),
+    }));
+  }
+
+  function removeGalleryItem(index: number) {
+    setContent((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((_, i) => i !== index),
+    }));
+  }
+
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-center justify-between">
+    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-amber-900">Panel Administrador</h1>
-          <p className="text-sm text-zinc-600">Gestiona contenido, galería y textos del sitio.</p>
+          <p className="text-sm text-zinc-600">
+            Editor visual profesional para textos, fotos y secciones del sitio.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -191,6 +255,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           >
             Ir al sitio público
           </Link>
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            disabled={isSaving}
+            className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+          >
+            {isSaving ? "Guardando..." : "Guardar todo"}
+          </button>
           <form action="/api/admin/logout" method="post">
             <button
               type="submit"
@@ -206,7 +278,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         <article className="rounded-xl border border-amber-100 bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Última actualización</p>
           <p className="mt-1 text-sm font-semibold text-amber-900">
-            {new Date(content.updatedAt).toLocaleString("es-CL")}
+            {new Date(content.updatedAt).toISOString().slice(0, 19).replace("T", " ")}
           </p>
         </article>
         <article className="rounded-xl border border-amber-100 bg-white p-4">
@@ -219,15 +291,55 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </article>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="soft-shadow rounded-xl border border-amber-100 bg-white p-5">
-          <h2 className="text-lg font-semibold text-amber-900">Edición rápida</h2>
-          <p className="mt-1 text-sm text-zinc-600">
-            Ajusta textos clave sin editar JSON completo.
-          </p>
-          <div className="mt-4 space-y-3">
-            <label className="block text-sm">
-              <span className="text-zinc-700">Título Home</span>
+      <section className="mb-4 flex flex-wrap gap-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-full px-4 py-2 text-sm ${
+              activeTab === tab.id
+                ? "bg-amber-700 font-semibold text-white"
+                : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </section>
+
+      {activeTab === "inicio" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <h2 className="text-lg font-semibold text-amber-900">Editor de Inicio</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm">
+              <span className="text-zinc-700">Nombre del sitio</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.brand.siteName}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    brand: { ...prev.brand, siteName: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-zinc-700">Tagline</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.brand.tagline}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    brand: { ...prev.brand, tagline: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Título hero</span>
               <input
                 className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
                 value={content.brand.heroTitle}
@@ -239,8 +351,8 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 }
               />
             </label>
-            <label className="block text-sm">
-              <span className="text-zinc-700">Subtítulo Home</span>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Subtítulo hero</span>
               <textarea
                 className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
                 rows={3}
@@ -253,8 +365,408 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 }
               />
             </label>
-            <label className="block text-sm">
-              <span className="text-zinc-700">WhatsApp principal</span>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Propuesta de valor</span>
+              <textarea
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                rows={3}
+                value={content.brand.valueProposition}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    brand: { ...prev.brand, valueProposition: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Mensaje WhatsApp por defecto</span>
+              <textarea
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                rows={2}
+                value={content.brand.defaultWhatsappMessage}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    brand: {
+                      ...prev.brand,
+                      defaultWhatsappMessage: event.target.value,
+                    },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Badges (una línea por badge)</span>
+              <textarea
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2 font-mono text-xs"
+                rows={4}
+                value={content.trustBadges.join("\n")}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    trustBadges: event.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  }))
+                }
+              />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "secciones" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <h2 className="text-lg font-semibold text-amber-900">Editor de Secciones</h2>
+          {(
+            Object.keys(content.pages) as PageKey[]
+          ).map((pageKey) => (
+            <article key={pageKey} className="rounded-xl border border-amber-100 p-4">
+              <p className="text-sm font-semibold text-amber-900">{pageLabels[pageKey]}</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="text-sm md:col-span-2">
+                  <span className="text-zinc-700">Título hero</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                    value={content.pages[pageKey].heroTitle}
+                    onChange={(event) =>
+                      updatePage(pageKey, "heroTitle", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="text-sm md:col-span-2">
+                  <span className="text-zinc-700">Subtítulo hero</span>
+                  <textarea
+                    className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                    rows={2}
+                    value={content.pages[pageKey].heroSubtitle}
+                    onChange={(event) =>
+                      updatePage(pageKey, "heroSubtitle", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="text-zinc-700">Texto botón CTA</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                    value={content.pages[pageKey].ctaLabel}
+                    onChange={(event) =>
+                      updatePage(pageKey, "ctaLabel", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="text-zinc-700">Mensaje WhatsApp CTA</span>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                    value={content.pages[pageKey].ctaMessage}
+                    onChange={(event) =>
+                      updatePage(pageKey, "ctaMessage", event.target.value)
+                    }
+                  />
+                </label>
+                <label className="text-sm md:col-span-2">
+                  <span className="text-zinc-700">Texto introductorio</span>
+                  <textarea
+                    className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                    rows={3}
+                    value={content.pages[pageKey].intro}
+                    onChange={(event) =>
+                      updatePage(pageKey, "intro", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {activeTab === "tarjetas" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-amber-900">Tarjetas del Home</h2>
+            <p className="text-xs text-zinc-500">Estilo catálogo con fondo editable</p>
+          </div>
+          {content.homeEventTypes.map((card, index) => (
+            <article key={card.href} className="rounded-xl border border-amber-100 p-4">
+              <div className="grid gap-4 md:grid-cols-[140px_1fr]">
+                <div className="relative h-28 overflow-hidden rounded-lg border border-amber-100 bg-amber-50">
+                  {card.backgroundImageUrl ? (
+                    <Image
+                      src={card.backgroundImageUrl}
+                      alt={`Fondo ${card.title}`}
+                      fill
+                      className="object-cover"
+                      sizes="140px"
+                    />
+                  ) : null}
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="text-sm">
+                    <span className="text-zinc-700">Título</span>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                      value={card.title}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.homeEventTypes];
+                          next[index] = { ...next[index], title: event.target.value };
+                          return { ...prev, homeEventTypes: next };
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="text-zinc-700">Ruta</span>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                      value={card.href}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.homeEventTypes];
+                          next[index] = { ...next[index], href: event.target.value };
+                          return { ...prev, homeEventTypes: next };
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="text-sm md:col-span-2">
+                    <span className="text-zinc-700">Descripción</span>
+                    <textarea
+                      className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                      rows={2}
+                      value={card.description}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.homeEventTypes];
+                          next[index] = {
+                            ...next[index],
+                            description: event.target.value,
+                          };
+                          return { ...prev, homeEventTypes: next };
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCardModalIndex(index)}
+                className="mt-3 rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+              >
+                Reemplazar fondo con modal
+              </button>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {activeTab === "galeria" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-amber-900">Galería</h2>
+            <button
+              type="button"
+              onClick={() => setGalleryModalOpen(true)}
+              className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              Subir nueva foto (modal)
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {content.gallery.map((item, index) => (
+              <article
+                key={item.id}
+                className="rounded-xl border border-amber-100 bg-amber-50/30 p-3"
+              >
+                <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
+                  <div className="relative h-24 overflow-hidden rounded-lg border border-amber-100 bg-white">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="120px"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <input
+                      className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                      value={item.title}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.gallery];
+                          next[index] = { ...next[index], title: event.target.value };
+                          return { ...prev, gallery: next };
+                        })
+                      }
+                    />
+                    <textarea
+                      className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                      rows={2}
+                      value={item.description}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.gallery];
+                          next[index] = { ...next[index], description: event.target.value };
+                          return { ...prev, gallery: next };
+                        })
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                        value={item.category}
+                        onChange={(event) =>
+                          setContent((prev) => {
+                            const next = [...prev.gallery];
+                            next[index] = {
+                              ...next[index],
+                              category: event.target.value as EventCategory,
+                            };
+                            return { ...prev, gallery: next };
+                          })
+                        }
+                      >
+                        {categoryOptions.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="inline-flex items-center gap-1 text-xs text-zinc-600">
+                        <input
+                          type="checkbox"
+                          checked={item.enabled}
+                          onChange={(event) =>
+                            setContent((prev) => {
+                              const next = [...prev.gallery];
+                              next[index] = {
+                                ...next[index],
+                                enabled: event.target.checked,
+                              };
+                              return { ...prev, gallery: next };
+                            })
+                          }
+                        />
+                        Visible
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeGalleryItem(index)}
+                  className="mt-2 text-xs font-semibold text-red-700 underline"
+                >
+                  Eliminar foto
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "testimonios" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-amber-900">Testimonios</h2>
+            <button
+              type="button"
+              onClick={addTestimonial}
+              className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              Agregar testimonio
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {content.testimonials.map((item, index) => (
+              <article key={item.id} className="rounded-xl border border-amber-100 p-3">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input
+                    className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                    value={item.author}
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const next = [...prev.testimonials];
+                        next[index] = { ...next[index], author: event.target.value };
+                        return { ...prev, testimonials: next };
+                      })
+                    }
+                  />
+                  <input
+                    className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                    value={item.role}
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const next = [...prev.testimonials];
+                        next[index] = { ...next[index], role: event.target.value };
+                        return { ...prev, testimonials: next };
+                      })
+                    }
+                  />
+                  <input
+                    className="rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                    value={item.eventType}
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const next = [...prev.testimonials];
+                        next[index] = { ...next[index], eventType: event.target.value };
+                        return { ...prev, testimonials: next };
+                      })
+                    }
+                  />
+                  <label className="inline-flex items-center gap-2 text-sm text-zinc-600">
+                    <input
+                      type="checkbox"
+                      checked={item.enabled}
+                      onChange={(event) =>
+                        setContent((prev) => {
+                          const next = [...prev.testimonials];
+                          next[index] = { ...next[index], enabled: event.target.checked };
+                          return { ...prev, testimonials: next };
+                        })
+                      }
+                    />
+                    Visible
+                  </label>
+                  <textarea
+                    className="md:col-span-2 rounded-lg border border-amber-200 px-3 py-2 text-sm"
+                    rows={3}
+                    value={item.text}
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const next = [...prev.testimonials];
+                        next[index] = { ...next[index], text: event.target.value };
+                        return { ...prev, testimonials: next };
+                      })
+                    }
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeTestimonial(index)}
+                  className="mt-2 text-xs font-semibold text-red-700 underline"
+                >
+                  Eliminar testimonio
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "contacto" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <h2 className="text-lg font-semibold text-amber-900">Contacto y redes</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="text-sm">
+              <span className="text-zinc-700">WhatsApp</span>
               <input
                 className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
                 value={content.contact.whatsappNumber}
@@ -266,84 +778,94 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 }
               />
             </label>
-            <button
-              type="button"
-              onClick={handleQuickSave}
-              disabled={isSaving}
-              className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
-            >
-              {isSaving ? "Guardando..." : "Guardar cambios rápidos"}
-            </button>
+            <label className="text-sm">
+              <span className="text-zinc-700">Teléfono visible</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.contact.phoneLabel}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, phoneLabel: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Dirección</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.contact.address}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, address: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-zinc-700">Email</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.contact.email}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, email: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm">
+              <span className="text-zinc-700">Instagram URL</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.contact.instagramUrl}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, instagramUrl: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Facebook URL</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                value={content.contact.facebookUrl}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, facebookUrl: event.target.value },
+                  }))
+                }
+              />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <span className="text-zinc-700">Google Maps Embed URL</span>
+              <textarea
+                className="mt-1 w-full rounded-lg border border-amber-200 px-3 py-2"
+                rows={3}
+                value={content.contact.mapEmbedUrl}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contact: { ...prev.contact, mapEmbedUrl: event.target.value },
+                  }))
+                }
+              />
+            </label>
           </div>
-        </article>
+        </section>
+      ) : null}
 
-        <article className="soft-shadow rounded-xl border border-amber-100 bg-white p-5">
-          <h2 className="text-lg font-semibold text-amber-900">Gestión visual (Cloudinary)</h2>
-          <p className="mt-1 text-sm text-zinc-600">
-            Sube fotos en modales y reemplaza fondos de tarjetas del home con estilo catálogo.
-          </p>
-          <div className="mt-4 space-y-4">
-            <button
-              type="button"
-              onClick={() => setGalleryModalOpen(true)}
-              className="rounded-full border border-amber-300 px-5 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
-            >
-              Abrir modal de subida a galería
-            </button>
-
-            <div className="space-y-2 rounded-xl border border-amber-100 bg-amber-50/40 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Fondos de tarjetas home
-              </p>
-              {content.homeEventTypes.map((card, index) => (
-                <div
-                  key={card.title}
-                  className="flex items-center justify-between rounded-lg border border-amber-100 bg-white px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-amber-900">{card.title}</p>
-                    <p className="text-xs text-zinc-500">
-                      {card.backgroundImageUrl ? "Fondo personalizado" : "Sin fondo personalizado"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCardModalIndex(index)}
-                    className="rounded-full border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
-                  >
-                    Reemplazar fondo
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section className="soft-shadow mt-6 rounded-xl border border-amber-100 bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-amber-900">Editor avanzado (JSON)</h2>
-          <p className="text-xs text-zinc-500">
-            Testimonios activos: {activeTestimonials} · Fotos: {content.gallery.length}
-          </p>
-        </div>
-        <textarea
-          value={jsonDraft}
-          onChange={(event) => setJsonDraft(event.target.value)}
-          className="h-[420px] w-full rounded-lg border border-amber-200 p-3 font-mono text-xs"
-        />
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSaveJson}
-            disabled={isSaving}
-            className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
-          >
-            {isSaving ? "Guardando..." : "Guardar JSON"}
-          </button>
-          {status ? <p className="text-sm text-zinc-700">{status}</p> : null}
-        </div>
-      </section>
+      {status ? (
+        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-zinc-700">
+          {status}
+        </p>
+      ) : null}
 
       {galleryModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
