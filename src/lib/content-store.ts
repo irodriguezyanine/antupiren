@@ -61,7 +61,7 @@ export async function saveSiteContent(nextContent: SiteContent): Promise<void> {
   form.append("timestamp", timestamp);
   form.append("api_key", cloudinaryConfig?.apiKey as string);
 
-  const params = `invalidate=true&overwrite=true&public_id=${CLOUDINARY_CONTENT_PUBLIC_ID}&resource_type=raw&timestamp=${timestamp}${cloudinaryConfig?.apiSecret}`;
+  const params = `invalidate=true&overwrite=true&public_id=${CLOUDINARY_CONTENT_PUBLIC_ID}&timestamp=${timestamp}${cloudinaryConfig?.apiSecret}`;
   const signature = await crypto.subtle.digest(
     "SHA-1",
     new TextEncoder().encode(params),

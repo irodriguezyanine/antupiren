@@ -20,11 +20,21 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   }
 
-  const body = (await request.json()) as SiteContent;
-  await saveSiteContent({
-    ...body,
-    updatedAt: new Date().toISOString(),
-  });
+  try {
+    const body = (await request.json()) as SiteContent;
+    await saveSiteContent({
+      ...body,
+      updatedAt: new Date().toISOString(),
+    });
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Error inesperado guardando contenido.";
+    console.error("[api/admin/content] save failed:", message);
+
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }
