@@ -3,7 +3,12 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { isAdminAuthenticated } from "@/lib/auth";
-import { cloudinaryConfig, cloudinaryEnabled } from "@/lib/cloudinary-config";
+import {
+  cloudinaryConfig,
+  cloudinaryConfigError,
+  cloudinaryConfigSource,
+  cloudinaryEnabled,
+} from "@/lib/cloudinary-config";
 
 export async function POST(request: Request) {
   const authenticated = await isAdminAuthenticated();
@@ -13,7 +18,10 @@ export async function POST(request: Request) {
 
   if (!cloudinaryEnabled || !cloudinaryConfig) {
     return NextResponse.json(
-      { ok: false, error: "Cloudinary no está configurado." },
+      {
+        ok: false,
+        error: cloudinaryConfigError || "Cloudinary no está configurado.",
+      },
       { status: 500 },
     );
   }
@@ -34,5 +42,6 @@ export async function POST(request: Request) {
     timestamp,
     signature,
     folder,
+    source: cloudinaryConfigSource,
   });
 }
