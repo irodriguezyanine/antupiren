@@ -1,10 +1,15 @@
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BenefitsGrid } from "@/components/benefits-grid";
 import { CtaBanner } from "@/components/cta-banner";
 import { EventCards } from "@/components/event-cards";
+import { Faq } from "@/components/faq";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { Hero } from "@/components/hero";
+import { ProcessSteps } from "@/components/process-steps";
+import { SectionTitle } from "@/components/section-title";
 import { SiteContainer } from "@/components/site-container";
 import { StatsGrid } from "@/components/stats-grid";
 import { Testimonials } from "@/components/testimonials";
@@ -44,7 +49,7 @@ export default async function HomePage() {
 
   return (
     <SiteContainer>
-      <div className="space-y-12">
+      <div className="space-y-14">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
@@ -57,8 +62,12 @@ export default async function HomePage() {
           ctaHref={whatsappLink}
         />
 
-        <section>
-          <h2 className="text-2xl font-semibold text-amber-900">Nuestra propuesta</h2>
+        <section className="rounded-3xl border border-amber-100 bg-white p-6">
+          <SectionTitle
+            eyebrow="Propuesta de valor"
+            title="Nuestra propuesta"
+            subtitle={content.brand.valueProposition}
+          />
           <p className="mt-3 max-w-3xl text-sm text-zinc-700">{content.brand.valueProposition}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {content.trustBadges.map((badge) => (
@@ -73,36 +82,81 @@ export default async function HomePage() {
         </section>
 
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-amber-900">Experiencia que respalda</h2>
+          <SectionTitle
+            eyebrow="Trayectoria"
+            title="Experiencia que respalda"
+            subtitle="Números reales que reflejan años de trabajo y clientes felices."
+          />
           <StatsGrid stats={content.stats} />
         </section>
 
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-amber-900">¿Qué evento quieres realizar?</h2>
+          <SectionTitle
+            eyebrow="Tipos de eventos"
+            title="¿Qué evento quieres realizar?"
+            subtitle="Diseñamos experiencias personalizadas según tu objetivo y estilo."
+          />
           <EventCards items={content.homeEventTypes} />
         </section>
 
         <section>
+          <SectionTitle
+            eyebrow="Cómo trabajamos"
+            title="Un proceso claro y sin estrés"
+            subtitle="Te acompañamos desde la primera conversación hasta el cierre del evento."
+          />
+          <ProcessSteps />
+        </section>
+
+        <section>
+          <SectionTitle
+            eyebrow="Servicios incluidos"
+            title="Todo lo que necesitas en un solo lugar"
+            subtitle="Combinamos entorno, producción y experiencia para lograr resultados memorables."
+          />
+          <BenefitsGrid />
+        </section>
+
+        <section>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-amber-900">Galería destacada</h2>
-            <Link href="/galeria" className="text-sm text-amber-700 hover:text-amber-900">
+            <h2 className="headline text-2xl font-semibold text-amber-900">Galería destacada</h2>
+            <Link
+              href="/galeria"
+              className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900"
+            >
               Ver galería completa
+              <ArrowRight size={14} />
             </Link>
           </div>
           <GalleryGrid items={content.gallery.slice(0, 6)} />
         </section>
 
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-amber-900">Qué dicen de nosotros</h2>
+          <SectionTitle
+            eyebrow="Confianza"
+            title="Qué dicen de nosotros"
+            subtitle="Historias reales de personas y empresas que celebraron con nosotros."
+          />
           <Testimonials items={content.testimonials} />
         </section>
 
-        <CtaBanner
-          title="Fechas disponibles limitadas"
-          description="Agenda una visita y asegura tu fecha con anticipación. Nuestro equipo te responderá por WhatsApp."
-          href={whatsappLink}
-          label="Quiero agendar mi visita"
-        />
+        <section className="grid gap-5 lg:grid-cols-2">
+          <div>
+            <SectionTitle
+              eyebrow="Preguntas frecuentes"
+              title="Resolvemos tus dudas"
+              subtitle="Si tienes una consulta específica, te respondemos por WhatsApp en minutos."
+            />
+            <Faq />
+          </div>
+          <CtaBanner
+            title="Fechas disponibles limitadas"
+            description="Agenda una visita y asegura tu fecha con anticipación. Nuestro equipo te responderá por WhatsApp."
+            href={whatsappLink}
+            label="Quiero agendar mi visita"
+          />
+        </section>
+
       </div>
     </SiteContainer>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CtaBanner } from "@/components/cta-banner";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { Hero } from "@/components/hero";
+import { SectionTitle } from "@/components/section-title";
 import { SiteContainer } from "@/components/site-container";
 import { getSiteContent } from "@/lib/content-store";
 import { buildWhatsappLink, titleWithBrand } from "@/lib/site-utils";
@@ -69,6 +70,11 @@ export default async function GaleriaPage({ searchParams }: GalleryPageProps) {
             </Link>
           ))}
         </div>
+        <SectionTitle
+          eyebrow="Fotos reales"
+          title="Explora eventos por categoría"
+          subtitle="Cada imagen refleja montajes y experiencias reales en Antupirén."
+        />
         <GalleryGrid items={content.gallery} filter={selected} />
         <CtaBanner
           title="¿Te gustó lo que viste?"

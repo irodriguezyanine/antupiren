@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { CircleCheckBig, Clock3, MapPin } from "lucide-react";
 import Link from "next/link";
 
 import { Hero } from "@/components/hero";
+import { SectionTitle } from "@/components/section-title";
 import { SiteContainer } from "@/components/site-container";
 import { getSiteContent } from "@/lib/content-store";
 import { buildWhatsappLink, titleWithBrand } from "@/lib/site-utils";
@@ -15,8 +17,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function ContactoPage() {
+type ContactoPageProps = {
+  searchParams: Promise<{
+    enviado?: string;
+  }>;
+};
+
+export default async function ContactoPage({ searchParams }: ContactoPageProps) {
   const content = await getSiteContent();
+  const params = await searchParams;
   const ctaLink = buildWhatsappLink(
     content.contact.whatsappNumber,
     content.pages.contacto.ctaMessage,
@@ -33,9 +42,27 @@ export default async function ContactoPage() {
           badge="Contacto y reservas"
         />
 
+        <section className="grid gap-4 sm:grid-cols-3">
+          <article className="rounded-2xl border border-amber-100 bg-white p-4">
+            <MapPin className="text-amber-700" size={18} />
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Ubicación</p>
+            <p className="mt-1 text-sm text-zinc-700">{content.contact.address}</p>
+          </article>
+          <article className="rounded-2xl border border-amber-100 bg-white p-4">
+            <Clock3 className="text-amber-700" size={18} />
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Atención</p>
+            <p className="mt-1 text-sm text-zinc-700">Lunes a sábado · 09:00 a 20:00</p>
+          </article>
+          <article className="rounded-2xl border border-amber-100 bg-white p-4">
+            <CircleCheckBig className="text-amber-700" size={18} />
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Respuesta</p>
+            <p className="mt-1 text-sm text-zinc-700">WhatsApp prioritario en minutos</p>
+          </article>
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-2">
           <article className="rounded-xl border border-amber-100 bg-white p-6">
-            <h2 className="text-xl font-semibold text-amber-900">Datos de contacto</h2>
+            <SectionTitle title="Datos de contacto" subtitle="También puedes escribirnos por redes sociales." />
             <ul className="mt-4 space-y-2 text-sm text-zinc-700">
               <li>Dirección: {content.contact.address}</li>
               <li>WhatsApp: {content.contact.phoneLabel}</li>
@@ -56,7 +83,10 @@ export default async function ContactoPage() {
             method="post"
             className="space-y-3 rounded-xl border border-amber-100 bg-white p-6"
           >
-            <h2 className="text-xl font-semibold text-amber-900">Formulario de contacto</h2>
+            <SectionTitle
+              title="Formulario de contacto"
+              subtitle="Cuéntanos tu idea y te responderemos a la brevedad."
+            />
             <input
               name="name"
               required
@@ -90,10 +120,15 @@ export default async function ContactoPage() {
             />
             <button
               type="submit"
-              className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+              className="rounded-full bg-amber-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-amber-800"
             >
               Enviar consulta
             </button>
+            {params.enviado ? (
+              <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+                ¡Mensaje enviado! Te contactaremos pronto.
+              </p>
+            ) : null}
           </form>
         </section>
 

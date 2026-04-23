@@ -1,6 +1,7 @@
 import { CtaBanner } from "@/components/cta-banner";
 import { GalleryGrid } from "@/components/gallery-grid";
 import { Hero } from "@/components/hero";
+import { SectionTitle } from "@/components/section-title";
 import { SiteContainer } from "@/components/site-container";
 import { Testimonials } from "@/components/testimonials";
 import { buildWhatsappLink } from "@/lib/site-utils";
@@ -27,7 +28,7 @@ export function ServicePage({
 
   return (
     <SiteContainer>
-      <div className="space-y-10">
+      <div className="space-y-12">
         <Hero
           title={page.heroTitle}
           subtitle={page.heroSubtitle}
@@ -35,15 +36,35 @@ export function ServicePage({
           ctaHref={ctaLink}
           badge={badge}
         />
-        <section>
-          <p className="max-w-3xl text-sm leading-relaxed text-zinc-700">{page.intro}</p>
+        <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="rounded-2xl border border-amber-100 bg-white p-6">
+            <SectionTitle eyebrow="Descripción" title="Servicio a tu medida" subtitle={page.intro} />
+            <p className="text-sm leading-relaxed text-zinc-700">{page.intro}</p>
+          </article>
+          <article className="rounded-2xl border border-amber-100 bg-white p-6">
+            <p className="text-xs uppercase tracking-widest text-amber-700">Incluye</p>
+            <ul className="mt-3 space-y-2 text-sm text-zinc-700">
+              <li>• Asesoría previa y coordinación de montaje.</li>
+              <li>• Espacios interiores y exteriores flexibles.</li>
+              <li>• Soporte operativo durante todo el evento.</li>
+              <li>• Atención personalizada por WhatsApp.</li>
+            </ul>
+          </article>
         </section>
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-amber-900">Galería relacionada</h2>
+          <SectionTitle
+            eyebrow="Inspiración"
+            title="Galería relacionada"
+            subtitle="Imágenes reales para ayudarte a proyectar tu evento."
+          />
           <GalleryGrid items={gallery} filter={galleryFilter} />
         </section>
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-amber-900">Testimonios</h2>
+          <SectionTitle
+            eyebrow="Respaldo"
+            title="Testimonios"
+            subtitle="La experiencia de nuestros clientes es nuestra mejor carta de presentación."
+          />
           <Testimonials items={testimonials} />
         </section>
         <CtaBanner

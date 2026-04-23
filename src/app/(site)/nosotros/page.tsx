@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { CtaBanner } from "@/components/cta-banner";
 import { Hero } from "@/components/hero";
+import { SectionTitle } from "@/components/section-title";
 import { SiteContainer } from "@/components/site-container";
 import { StatsGrid } from "@/components/stats-grid";
 import { Testimonials } from "@/components/testimonials";
@@ -35,6 +36,11 @@ export default async function NosotrosPage() {
           badge="Historia y equipo"
         />
         <section className="rounded-xl border border-amber-100 bg-white p-6">
+          <SectionTitle
+            eyebrow="Nuestra esencia"
+            title="Comprometidos con experiencias memorables"
+            subtitle="La conexión con el entorno y el cuidado por los detalles nos diferencian."
+          />
           <p className="text-sm leading-relaxed text-zinc-700">{content.pages.nosotros.intro}</p>
           <p className="mt-4 text-sm leading-relaxed text-zinc-700">
             Somos un equipo local que mezcla experiencia, cercanía y gestión profesional para que

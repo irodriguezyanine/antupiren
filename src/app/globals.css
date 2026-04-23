@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf9;
-  --foreground: #18181b;
+  --background: #f7f5ef;
+  --foreground: #1f2937;
+  --brand-900: #4a2a0a;
+  --brand-700: #8a4b1f;
+  --brand-500: #b66a2f;
+  --brand-100: #f5e6d7;
+  --surface: #fffdf8;
 }
 
 @theme inline {
@@ -16,8 +21,34 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  text-wrap: pretty;
 }
 
 a {
   text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.glass-panel {
+  background: color-mix(in oklab, white 78%, #f7ecdf 22%);
+  backdrop-filter: blur(10px);
+}
+
+.brand-gradient {
+  background: radial-gradient(circle at 15% 15%, #2f5a3f 0%, #5a3515 48%, #2b1a0f 100%);
+}
+
+.soft-shadow {
+  box-shadow: 0 16px 42px -24px rgba(51, 27, 8, 0.4);
+}
+
+.headline {
+  letter-spacing: -0.03em;
+}
+
+.section-spacing {
+  margin-top: 4rem;
 }

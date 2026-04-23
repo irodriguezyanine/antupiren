@@ -118,7 +118,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-amber-900">Panel Administrador</h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-amber-900">Panel Administrador</h1>
+          <p className="text-sm text-zinc-600">Gestiona contenido, galería y textos del sitio.</p>
+        </div>
         <form action="/api/admin/logout" method="post">
           <button
             type="submit"
@@ -129,8 +132,25 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </form>
       </div>
 
+      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+        <article className="rounded-xl border border-amber-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-zinc-500">Última actualización</p>
+          <p className="mt-1 text-sm font-semibold text-amber-900">
+            {new Date(content.updatedAt).toLocaleString("es-CL")}
+          </p>
+        </article>
+        <article className="rounded-xl border border-amber-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-zinc-500">Testimonios activos</p>
+          <p className="mt-1 text-sm font-semibold text-amber-900">{activeTestimonials}</p>
+        </article>
+        <article className="rounded-xl border border-amber-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-zinc-500">Fotos cargadas</p>
+          <p className="mt-1 text-sm font-semibold text-amber-900">{content.gallery.length}</p>
+        </article>
+      </section>
+
       <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+        <article className="soft-shadow rounded-xl border border-amber-100 bg-white p-5">
           <h2 className="text-lg font-semibold text-amber-900">Edición rápida</h2>
           <p className="mt-1 text-sm text-zinc-600">
             Ajusta textos clave sin editar JSON completo.
@@ -187,7 +207,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           </div>
         </article>
 
-        <article className="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+        <article className="soft-shadow rounded-xl border border-amber-100 bg-white p-5">
           <h2 className="text-lg font-semibold text-amber-900">Subir foto a galería</h2>
           <p className="mt-1 text-sm text-zinc-600">
             Sube imagen y asígnala a una categoría. Luego guarda para publicar.
@@ -241,7 +261,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </article>
       </section>
 
-      <section className="mt-6 rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+      <section className="soft-shadow mt-6 rounded-xl border border-amber-100 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-amber-900">Editor avanzado (JSON)</h2>
           <p className="text-xs text-zinc-500">
