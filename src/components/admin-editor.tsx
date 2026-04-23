@@ -186,10 +186,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/admin/login"
+            href="/"
             className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
           >
-            Ir a login admin
+            Ir al sitio público
           </Link>
           <form action="/api/admin/logout" method="post">
             <button
