@@ -90,7 +90,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     [content.testimonials],
   );
 
-  async function saveContent(next: SiteContent) {
+  async function saveContent(next: SiteContent): Promise<boolean> {
     setIsSaving(true);
     setStatus("");
 
@@ -106,11 +106,12 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         | { error?: string }
         | null;
       setStatus(payload?.error ?? "No se pudo guardar los cambios.");
-      return;
+      return false;
     }
 
     setStatus("Cambios guardados correctamente.");
     setContent(next);
+    return true;
   }
 
   async function handleSaveAll() {
@@ -210,13 +211,15 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         updatedAt: new Date().toISOString(),
       };
 
-      setContent(next);
-      setGalleryModalOpen(false);
-      setGalleryUploadFile(null);
-      setGalleryUploadTitle("");
-      setGalleryUploadDescription("");
-      setGalleryUploadCategory("matrimonios");
-      setStatus("Imagen subida correctamente. Guarda para publicar.");
+      const saved = await saveContent(next);
+      if (saved) {
+        setGalleryModalOpen(false);
+        setGalleryUploadFile(null);
+        setGalleryUploadTitle("");
+        setGalleryUploadDescription("");
+        setGalleryUploadCategory("matrimonios");
+        setStatus("Imagen subida y publicada correctamente.");
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Error subiendo a Cloudinary.");
     } finally {
@@ -247,14 +250,17 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         backgroundPublicId: uploaded.publicId,
       };
 
-      setContent((prev) => ({
-        ...prev,
+      const next = {
+        ...content,
         homeEventTypes: nextCards,
         updatedAt: new Date().toISOString(),
-      }));
-      setCardModalIndex(null);
-      setCardUploadFile(null);
-      setStatus("Fondo actualizado. Guarda para publicar.");
+      };
+      const saved = await saveContent(next);
+      if (saved) {
+        setCardModalIndex(null);
+        setCardUploadFile(null);
+        setStatus("Fondo actualizado y publicado.");
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "No se pudo subir fondo.");
     } finally {
@@ -276,26 +282,27 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         galleryReplaceFile,
         "antupiren/gallery",
       );
-      setContent((prev) => {
-        const next = [...prev.gallery];
-        const item = next[itemIndex];
-        if (!item) return prev;
-        next[itemIndex] = {
-          ...item,
-          imageUrl: uploaded.secureUrl,
-          publicId: uploaded.publicId,
-        };
-
-        return {
-          ...prev,
-          gallery: next,
-          updatedAt: new Date().toISOString(),
-        };
-      });
-
-      setGalleryReplaceIndex(null);
-      setGalleryReplaceFile(null);
-      setStatus("Foto reemplazada correctamente. Guarda para publicar.");
+      const nextGallery = [...content.gallery];
+      const item = nextGallery[itemIndex];
+      if (!item) {
+        throw new Error("No se encontró la imagen de galería a reemplazar.");
+      }
+      nextGallery[itemIndex] = {
+        ...item,
+        imageUrl: uploaded.secureUrl,
+        publicId: uploaded.publicId,
+      };
+      const next = {
+        ...content,
+        gallery: nextGallery,
+        updatedAt: new Date().toISOString(),
+      };
+      const saved = await saveContent(next);
+      if (saved) {
+        setGalleryReplaceIndex(null);
+        setGalleryReplaceFile(null);
+        setStatus("Foto reemplazada y publicada.");
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "No se pudo reemplazar la foto.");
     } finally {
