@@ -86,7 +86,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     setUploadingGallery(false);
 
     if (!response.ok) {
-      setStatus("No se pudo subir imagen a Cloudinary.");
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      setStatus(payload?.error ?? "No se pudo subir imagen a Cloudinary.");
       return;
     }
 
@@ -137,7 +140,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     setUploadingCard(false);
 
     if (!response.ok) {
-      setStatus("No se pudo subir fondo de tarjeta.");
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      setStatus(payload?.error ?? "No se pudo subir fondo de tarjeta.");
       return;
     }
 
