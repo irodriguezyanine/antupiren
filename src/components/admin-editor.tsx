@@ -1,6 +1,19 @@
 "use client";
 
-import { ImagePlus, Palette, Pencil, Upload, X } from "lucide-react";
+import {
+  BarChart3,
+  ChevronRight,
+  FileText,
+  ImagePlus,
+  Images,
+  LayoutPanelTop,
+  Palette,
+  Pencil,
+  Phone,
+  RotateCcw,
+  Upload,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +40,19 @@ type SiteColorKey =
   | "siteAccentColor"
   | "siteSurfaceColor"
   | "siteTextColor";
+type ColorTarget =
+  | { kind: "site"; field: SiteColorKey; label: string }
+  | {
+      kind: "hero";
+      field: "heroGradientFrom" | "heroGradientVia" | "heroGradientTo";
+      label: string;
+    }
+  | {
+      kind: "panel";
+      tabId: AdminTab;
+      field: "gradientFrom" | "gradientVia" | "gradientTo";
+      label: string;
+    };
 
 type SignedUploadPayload = {
   ok: boolean;
@@ -69,6 +95,41 @@ const mainTabs: { id: MainAdminTab; label: string }[] = [
   { id: "estadisticas", label: "Estadísticas" },
   { id: "calendario", label: "Calendario" },
 ];
+const editorSectionMeta: Record<
+  AdminTab,
+  { label: string; description: string; icon: typeof LayoutPanelTop }
+> = {
+  inicio: {
+    label: "Inicio",
+    description: "Hero principal, textos base y paleta global del sitio.",
+    icon: LayoutPanelTop,
+  },
+  secciones: {
+    label: "Secciones",
+    description: "Textos hero por página y mensajes de CTA.",
+    icon: FileText,
+  },
+  tarjetas: {
+    label: "Tarjetas Home",
+    description: "Tarjetas de servicios con fondo, encuadre y copy.",
+    icon: Images,
+  },
+  galeria: {
+    label: "Galería",
+    description: "Subida, reemplazo y edición de galería destacada.",
+    icon: ImagePlus,
+  },
+  testimonios: {
+    label: "Testimonios",
+    description: "Opiniones de clientes y visualización en Home.",
+    icon: BarChart3,
+  },
+  contacto: {
+    label: "Contacto",
+    description: "WhatsApp, redes, dirección y formulario.",
+    icon: Phone,
+  },
+};
 
 const siteColorLabels: Record<SiteColorKey, string> = {
   sitePrimaryColor: "Color primario",
@@ -139,12 +200,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<MainAdminTab>("editor");
   const [activeTab, setActiveTab] = useState<AdminTab>("inicio");
+  const [editingSection, setEditingSection] = useState<AdminTab | null>(null);
 
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [cardModalIndex, setCardModalIndex] = useState<number | null>(null);
   const [galleryReplaceIndex, setGalleryReplaceIndex] = useState<number | null>(null);
   const [paletteModalOpen, setPaletteModalOpen] = useState(false);
   const [paletteTarget, setPaletteTarget] = useState<SiteColorKey>("sitePrimaryColor");
+  const [colorPickerTarget, setColorPickerTarget] = useState<ColorTarget | null>(null);
 
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [uploadingCard, setUploadingCard] = useState(false);
@@ -210,6 +273,24 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   useEffect(() => () => {
     if (panelBackgroundPreviewUrl) URL.revokeObjectURL(panelBackgroundPreviewUrl);
   }, [panelBackgroundPreviewUrl]);
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (colorPickerTarget) {
+        setColorPickerTarget(null);
+        return;
+      }
+      if (paletteModalOpen) {
+        setPaletteModalOpen(false);
+        return;
+      }
+      if (editingSection) {
+        setEditingSection(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [colorPickerTarget, paletteModalOpen, editingSection]);
 
   async function saveContent(next: SiteContent): Promise<boolean> {
     setIsSaving(true);
@@ -598,34 +679,40 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         <p className="mt-1 text-xs text-zinc-500">
           Configura degradé + imagen para la tarjeta principal de esta pestaña.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <label className="text-xs">
-            <span className="text-zinc-600">Color inicial</span>
-            <input
-              type="color"
-              className="mt-1 h-10 w-full rounded-md border border-amber-200"
-              value={style.gradientFrom}
-              onChange={(event) => updatePanelStyle(tabId, { gradientFrom: event.target.value })}
-            />
-          </label>
-          <label className="text-xs">
-            <span className="text-zinc-600">Color medio</span>
-            <input
-              type="color"
-              className="mt-1 h-10 w-full rounded-md border border-amber-200"
-              value={style.gradientVia}
-              onChange={(event) => updatePanelStyle(tabId, { gradientVia: event.target.value })}
-            />
-          </label>
-          <label className="text-xs">
-            <span className="text-zinc-600">Color final</span>
-            <input
-              type="color"
-              className="mt-1 h-10 w-full rounded-md border border-amber-200"
-              value={style.gradientTo}
-              onChange={(event) => updatePanelStyle(tabId, { gradientTo: event.target.value })}
-            />
-          </label>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {renderColorDot({
+            kind: "panel",
+            tabId,
+            field: "gradientFrom",
+            label: "Inicio",
+          })}
+          {renderColorDot({
+            kind: "panel",
+            tabId,
+            field: "gradientVia",
+            label: "Medio",
+          })}
+          {renderColorDot({
+            kind: "panel",
+            tabId,
+            field: "gradientTo",
+            label: "Final",
+          })}
+          <button
+            type="button"
+            onClick={() =>
+              updatePanelStyle(tabId, {
+                gradientFrom: "#f7f5ef",
+                gradientVia: "#efe2d2",
+                gradientTo: "#f9f3e8",
+                overlayOpacity: 0,
+              })
+            }
+            className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-amber-100"
+          >
+            <RotateCcw size={12} />
+            Reset estilo
+          </button>
         </div>
         <label className="mt-3 block text-xs">
           <span className="text-zinc-600">Intensidad overlay ({overlayPercent}%)</span>
@@ -656,20 +743,19 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 setPanelBackgroundTarget(tabId);
                 panelBackgroundFileRef.current?.click();
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+              title="Elegir imagen"
             >
               <Upload size={14} />
-              Elegir imagen
             </button>
             <button
               type="button"
               disabled={uploadingPanelBackground || panelBackgroundTarget !== tabId}
               onClick={() => submitPanelBackgroundUpload(tabId)}
-              className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+              title="Subir imagen"
             >
-              {uploadingPanelBackground && panelBackgroundTarget === tabId
-                ? "Subiendo..."
-                : "Subir imagen"}
+              <Upload size={14} />
             </button>
             <button
               type="button"
@@ -679,9 +765,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   backgroundPublicId: "",
                 })
               }
-              className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
+              title="Quitar imagen"
             >
-              Quitar imagen
+              <X size={14} />
             </button>
           </div>
           <p className="mt-2 text-xs text-zinc-500">
@@ -719,6 +806,24 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     };
   }
 
+  function renderColorDot(target: ColorTarget) {
+    const value = getColorTargetValue(target);
+    return (
+      <button
+        type="button"
+        onClick={() => setColorPickerTarget(target)}
+        className="group inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-2 py-1 hover:border-amber-400"
+        title={`Editar ${target.label}`}
+      >
+        <span
+          className="h-6 w-6 rounded-full border border-white shadow ring-1 ring-black/10"
+          style={{ backgroundColor: value }}
+        />
+        <span className="text-xs text-zinc-600 group-hover:text-zinc-800">{target.label}</span>
+      </button>
+    );
+  }
+
   function updateSiteColor(field: SiteColorKey, value: string) {
     setContent((prev) => ({
       ...prev,
@@ -727,6 +832,42 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         [field]: value,
       },
     }));
+  }
+
+  function getColorTargetValue(target: ColorTarget): string {
+    if (target.kind === "site") {
+      return content.brand[target.field] || "#000000";
+    }
+    if (target.kind === "hero") {
+      return (
+        content.brand[target.field] ||
+        {
+          heroGradientFrom: "#2f5a3f",
+          heroGradientVia: "#5a3515",
+          heroGradientTo: "#2b1a0f",
+        }[target.field]
+      );
+    }
+    const style = getPanelStyle(target.tabId);
+    return style[target.field] || "#000000";
+  }
+
+  function applyColorToTarget(target: ColorTarget, value: string) {
+    if (target.kind === "site") {
+      updateSiteColor(target.field, value);
+      return;
+    }
+    if (target.kind === "hero") {
+      setContent((prev) => ({
+        ...prev,
+        brand: {
+          ...prev.brand,
+          [target.field]: value,
+        },
+      }));
+      return;
+    }
+    updatePanelStyle(target.tabId, { [target.field]: value });
   }
 
   return (
@@ -783,23 +924,73 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
 
       {activeMainTab === "editor" ? (
         <>
-          <section className="mb-4 flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full px-4 py-2 text-sm ${
-                  activeTab === tab.id
-                    ? "bg-amber-700 font-semibold text-white"
-                    : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <section className="mb-4 rounded-2xl border border-amber-100 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-amber-900">Secciones editables</h2>
+              <p className="text-xs text-zinc-500">
+                Selecciona una sección para abrir su editor avanzado.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {tabs.map((tab) => {
+                const meta = editorSectionMeta[tab.id];
+                const Icon = meta.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setEditingSection(tab.id);
+                    }}
+                    className="group rounded-xl border border-amber-100 bg-amber-50/40 p-4 text-left transition hover:border-amber-300 hover:bg-amber-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-amber-900 ring-1 ring-amber-200">
+                        <Icon size={16} />
+                      </span>
+                      <ChevronRight
+                        size={16}
+                        className="text-zinc-400 transition group-hover:translate-x-0.5 group-hover:text-amber-800"
+                      />
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-amber-900">{meta.label}</p>
+                    <p className="mt-1 text-xs text-zinc-600">{meta.description}</p>
+                  </button>
+                );
+              })}
+            </div>
           </section>
 
+          {editingSection ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="relative max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-2xl">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-amber-100 bg-white/95 px-5 py-4 backdrop-blur">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                      Editor
+                    </span>
+                    <select
+                      className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs text-zinc-700"
+                      value={activeTab}
+                      onChange={(event) => setActiveTab(event.target.value as AdminTab)}
+                    >
+                      {tabs.map((tab) => (
+                        <option key={tab.id} value={tab.id}>
+                          {tab.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingSection(null)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="max-h-[calc(92vh-70px)] overflow-y-auto p-5">
       {activeTab === "inicio" ? (
         <section
           className="space-y-4 rounded-xl border border-amber-100 p-5"
@@ -876,49 +1067,41 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               <p className="mt-1 text-xs text-zinc-500">
                 Define paleta de degradé y/o imagen de fondo con overlay profesional.
               </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="text-xs">
-                  <span className="text-zinc-600">Color inicial</span>
-                  <input
-                    type="color"
-                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
-                    value={content.brand.heroGradientFrom || "#2f5a3f"}
-                    onChange={(event) =>
-                      setContent((prev) => ({
-                        ...prev,
-                        brand: { ...prev.brand, heroGradientFrom: event.target.value },
-                      }))
-                    }
-                  />
-                </label>
-                <label className="text-xs">
-                  <span className="text-zinc-600">Color medio</span>
-                  <input
-                    type="color"
-                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
-                    value={content.brand.heroGradientVia || "#5a3515"}
-                    onChange={(event) =>
-                      setContent((prev) => ({
-                        ...prev,
-                        brand: { ...prev.brand, heroGradientVia: event.target.value },
-                      }))
-                    }
-                  />
-                </label>
-                <label className="text-xs">
-                  <span className="text-zinc-600">Color final</span>
-                  <input
-                    type="color"
-                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
-                    value={content.brand.heroGradientTo || "#2b1a0f"}
-                    onChange={(event) =>
-                      setContent((prev) => ({
-                        ...prev,
-                        brand: { ...prev.brand, heroGradientTo: event.target.value },
-                      }))
-                    }
-                  />
-                </label>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroGradientFrom",
+                  label: "Inicio",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroGradientVia",
+                  label: "Medio",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroGradientTo",
+                  label: "Final",
+                })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setContent((prev) => ({
+                      ...prev,
+                      brand: {
+                        ...prev.brand,
+                        heroGradientFrom: "#2f5a3f",
+                        heroGradientVia: "#5a3515",
+                        heroGradientTo: "#2b1a0f",
+                        heroOverlayOpacity: 0.55,
+                      },
+                    }))
+                  }
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-amber-100"
+                >
+                  <RotateCcw size={12} />
+                  Reset Hero
+                </button>
               </div>
 
               <label className="mt-3 block text-xs">
@@ -956,18 +1139,19 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   <button
                     type="button"
                     onClick={() => heroBackgroundFileRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                    title="Elegir imagen Hero"
                   >
                     <Upload size={14} />
-                    Elegir imagen de fondo
                   </button>
                   <button
                     type="button"
                     disabled={uploadingHeroBackground}
                     onClick={submitHeroBackgroundUpload}
-                    className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+                    title="Subir imagen Hero"
                   >
-                    {uploadingHeroBackground ? "Subiendo..." : "Subir imagen Hero"}
+                    <Upload size={14} />
                   </button>
                   <button
                     type="button"
@@ -981,9 +1165,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                         },
                       }))
                     }
-                    className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
+                    title="Quitar imagen Hero"
                   >
-                    Quitar imagen
+                    <X size={14} />
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-zinc-500">
@@ -1008,7 +1193,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
             </div>
             <div className="rounded-xl border border-amber-100 bg-white p-4 md:col-span-2">
               <p className="text-sm font-semibold text-amber-900">Paleta activa del sitio</p>
-              <div className="mt-3 grid grid-cols-5 gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {(
                   [
                     "sitePrimaryColor",
@@ -1018,13 +1203,9 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                     "siteTextColor",
                   ] as SiteColorKey[]
                 ).map((field) => (
-                  <div key={field} className="space-y-1">
-                    <p className="text-[11px] text-zinc-600">{siteColorLabels[field]}</p>
-                    <div
-                      className="h-10 rounded-md border border-amber-200"
-                      style={{ backgroundColor: content.brand[field] || "#000000" }}
-                    />
-                  </div>
+                  <span key={field}>
+                    {renderColorDot({ kind: "site", field, label: siteColorLabels[field] })}
+                  </span>
                 ))}
               </div>
             </div>
@@ -1397,6 +1578,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           </div>
         </section>
       ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 
@@ -1791,6 +1976,52 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </div>
       ) : null}
 
+      {colorPickerTarget ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-amber-100 bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-amber-900">
+                Elegir color: {colorPickerTarget.label}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setColorPickerTarget(null)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <span
+                className="h-9 w-9 rounded-full border border-white shadow ring-1 ring-black/10"
+                style={{ backgroundColor: getColorTargetValue(colorPickerTarget) }}
+              />
+              <p className="text-sm text-zinc-700">{getColorTargetValue(colorPickerTarget)}</p>
+            </div>
+            <div className="grid grid-cols-8 gap-2 sm:grid-cols-10 md:grid-cols-13">
+              {largeColorPalette.map((color) => (
+                <button
+                  key={`picker-${color}`}
+                  type="button"
+                  onClick={() => applyColorToTarget(colorPickerTarget, color)}
+                  className="h-8 w-8 rounded-full border border-white/70 shadow-sm hover:scale-105"
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              ))}
+            </div>
+            <div className="mt-4">
+              <input
+                type="color"
+                value={getColorTargetValue(colorPickerTarget)}
+                onChange={(event) => applyColorToTarget(colorPickerTarget, event.target.value)}
+                className="h-10 w-20 rounded-md border border-amber-200"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {paletteModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
           <div className="w-full max-w-4xl rounded-2xl border border-amber-100 bg-white p-6">
@@ -1809,33 +2040,24 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               Elige el color a editar y luego haz clic en cualquier tono de la paleta grande.
             </p>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-5">
+            <div className="mt-4 flex flex-wrap gap-2">
               {(Object.keys(siteColorLabels) as SiteColorKey[]).map((field) => (
-                <label
+                <button
                   key={field}
-                  className={`rounded-xl border p-3 ${
+                  type="button"
+                  onClick={() => setPaletteTarget(field)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-2 py-1 ${
                     paletteTarget === field
-                      ? "border-amber-400 bg-amber-50"
-                      : "border-amber-100 bg-white"
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-amber-200 bg-white"
                   }`}
                 >
-                  <span className="mb-2 block text-xs font-medium text-zinc-700">
-                    {siteColorLabels[field]}
-                  </span>
-                  <input
-                    type="radio"
-                    name="paletteTarget"
-                    checked={paletteTarget === field}
-                    onChange={() => setPaletteTarget(field)}
-                    className="sr-only"
+                  <span
+                    className="h-6 w-6 rounded-full border border-white shadow ring-1 ring-black/10"
+                    style={{ backgroundColor: content.brand[field] || "#000000" }}
                   />
-                  <input
-                    type="color"
-                    className="h-10 w-full rounded-md border border-amber-200"
-                    value={content.brand[field] || "#000000"}
-                    onChange={(event) => updateSiteColor(field, event.target.value)}
-                  />
-                </label>
+                  <span className="text-xs text-zinc-700">{siteColorLabels[field]}</span>
+                </button>
               ))}
             </div>
 
