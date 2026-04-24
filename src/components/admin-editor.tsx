@@ -7,8 +7,11 @@ import {
   ImagePlus,
   Images,
   LayoutPanelTop,
+  Minus,
+  Move,
   Palette,
   Pencil,
+  Plus,
   Phone,
   RotateCcw,
   Upload,
@@ -16,7 +19,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { AdminEditorPanelStyle, EventCategory, SiteContent } from "@/types/content";
 
@@ -223,6 +226,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [cardModalIndex, setCardModalIndex] = useState<number | null>(null);
   const [galleryReplaceIndex, setGalleryReplaceIndex] = useState<number | null>(null);
+  const [activeDragCardIndex, setActiveDragCardIndex] = useState<number | null>(null);
   const [paletteModalOpen, setPaletteModalOpen] = useState(false);
   const [paletteTarget, setPaletteTarget] = useState<SiteColorKey>("sitePrimaryColor");
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorTarget | null>(null);
@@ -271,10 +275,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     () => (heroBackgroundFile ? URL.createObjectURL(heroBackgroundFile) : ""),
     [heroBackgroundFile],
   );
-  const panelBackgroundPreviewUrl = useMemo(
-    () => (panelBackgroundFile ? URL.createObjectURL(panelBackgroundFile) : ""),
-    [panelBackgroundFile],
-  );
   const hasHeroImage = Boolean(heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl);
   const hasPendingHeroFile = Boolean(heroBackgroundFile);
 
@@ -290,9 +290,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   useEffect(() => () => {
     if (heroBackgroundPreviewUrl) URL.revokeObjectURL(heroBackgroundPreviewUrl);
   }, [heroBackgroundPreviewUrl]);
-  useEffect(() => () => {
-    if (panelBackgroundPreviewUrl) URL.revokeObjectURL(panelBackgroundPreviewUrl);
-  }, [panelBackgroundPreviewUrl]);
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
@@ -629,6 +626,61 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     });
   }
 
+  function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function adjustCardZoom(index: number, delta: number) {
+    const current = getCardMediaSettings(index);
+    updateCardMediaSettings(index, {
+      backgroundZoom: clamp(Number((current.zoom + delta).toFixed(2)), 1, 2.5),
+    });
+  }
+
+  function updateCardPositionFromPointer(
+    index: number,
+    target: HTMLDivElement,
+    clientX: number,
+    clientY: number,
+  ) {
+    const rect = target.getBoundingClientRect();
+    const positionX = clamp(((clientX - rect.left) / rect.width) * 100, 0, 100);
+    const positionY = clamp(((clientY - rect.top) / rect.height) * 100, 0, 100);
+    updateCardMediaSettings(index, {
+      backgroundPositionX: positionX,
+      backgroundPositionY: positionY,
+    });
+  }
+
+  function handleCardPreviewPointerDown(
+    index: number,
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (event.button !== 0) return;
+    setActiveDragCardIndex(index);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateCardPositionFromPointer(index, event.currentTarget, event.clientX, event.clientY);
+  }
+
+  function handleCardPreviewPointerMove(
+    index: number,
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (activeDragCardIndex !== index) return;
+    updateCardPositionFromPointer(index, event.currentTarget, event.clientX, event.clientY);
+  }
+
+  function handleCardPreviewPointerUp(
+    index: number,
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) {
+    if (activeDragCardIndex !== index) return;
+    setActiveDragCardIndex(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   function getPanelStyle(tabId: AdminTab): Required<AdminEditorPanelStyle> {
     const style = content.adminEditor?.panelStyles?.[tabId] ?? {};
     return {
@@ -694,12 +746,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     const overlayPercent = Math.round(style.overlayOpacity * 100);
 
     return (
-      <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4">
-        <p className="text-sm font-semibold text-amber-900">Fondo de tarjeta principal</p>
-        <p className="mt-1 text-xs text-zinc-500">
-          Configura degradé + imagen para la tarjeta principal de esta pestaña.
+      <details className="rounded-xl border border-amber-100 bg-white/80 p-3">
+        <summary className="cursor-pointer list-none text-sm font-semibold text-amber-900">
+          Ajustes avanzados del editor (opcional)
+        </summary>
+        <p className="mt-2 text-xs text-zinc-500">
+          Solo afecta el fondo del editor de esta sección. No cambia el sitio público.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {renderColorDot({
             kind: "panel",
             tabId,
@@ -731,7 +785,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
             className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-amber-100"
           >
             <RotateCcw size={12} />
-            Reset estilo
+            Reset
           </button>
         </div>
         <label className="mt-3 block text-xs">
@@ -748,7 +802,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
             }
           />
         </label>
-        <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-white p-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             ref={panelBackgroundFileRef}
             type="file"
@@ -756,61 +810,48 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
             className="hidden"
             onChange={(event) => setPanelBackgroundFile(event.target.files?.[0] ?? null)}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setPanelBackgroundTarget(tabId);
-                panelBackgroundFileRef.current?.click();
-              }}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-              title="Elegir imagen"
-            >
-              <Upload size={14} />
-            </button>
-            <button
-              type="button"
-              disabled={uploadingPanelBackground || panelBackgroundTarget !== tabId}
-              onClick={() => submitPanelBackgroundUpload(tabId)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-              title="Subir imagen"
-            >
-              <Upload size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                updatePanelStyle(tabId, {
-                  backgroundImageUrl: "",
-                  backgroundPublicId: "",
-                })
-              }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
-              title="Quitar imagen"
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-zinc-500">
+          <button
+            type="button"
+            onClick={() => {
+              setPanelBackgroundTarget(tabId);
+              panelBackgroundFileRef.current?.click();
+            }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+            title="Elegir imagen"
+          >
+            <Upload size={14} />
+          </button>
+          <button
+            type="button"
+            disabled={uploadingPanelBackground || panelBackgroundTarget !== tabId}
+            onClick={() => submitPanelBackgroundUpload(tabId)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+            title="Subir imagen"
+          >
+            <Upload size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              updatePanelStyle(tabId, {
+                backgroundImageUrl: "",
+                backgroundPublicId: "",
+              })
+            }
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
+            title="Quitar imagen"
+          >
+            <X size={14} />
+          </button>
+          <p className="text-xs text-zinc-500">
             {panelBackgroundTarget === tabId && panelBackgroundFile
               ? panelBackgroundFile.name
-              : style.backgroundImageUrl || "Sin imagen seleccionada"}
+              : style.backgroundImageUrl
+                ? "Imagen seleccionada"
+                : "Sin imagen"}
           </p>
         </div>
-        <div
-          className="mt-3 h-28 rounded-xl border border-amber-100 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              (panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl
-                ? `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%), url(${(panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl})`
-              : `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%)`,
-            backgroundBlendMode:
-              (panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl
-                ? "overlay"
-                : "normal",
-          }}
-        />
-      </div>
+      </details>
     );
   }
 
@@ -824,6 +865,103 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
       backgroundPosition: "center",
       backgroundBlendMode: style.backgroundImageUrl ? "overlay" : "normal",
     };
+  }
+
+  function renderCardInteractiveAdjuster(
+    index: number,
+    previewUrl: string,
+    options?: { compact?: boolean; previewHeightClass?: string },
+  ) {
+    const media = getCardMediaSettings(index);
+    const compact = options?.compact ?? false;
+    const previewHeightClass = options?.previewHeightClass ?? "h-48";
+
+    return (
+      <div className={`rounded-xl border border-amber-100 bg-white/85 p-3 ${compact ? "" : "mt-3"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <Move size={12} />
+            Arrastra la imagen para posicionarla
+          </p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-2 py-1">
+            <button
+              type="button"
+              onClick={() => adjustCardZoom(index, -0.1)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 text-amber-900 hover:bg-amber-100"
+              title="Alejar"
+            >
+              <Minus size={12} />
+            </button>
+            <span className="min-w-16 text-center text-xs font-semibold text-zinc-700">
+              {media.zoom.toFixed(2)}x
+            </span>
+            <button
+              type="button"
+              onClick={() => adjustCardZoom(index, 0.1)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-200 text-amber-900 hover:bg-amber-100"
+              title="Acercar"
+            >
+              <Plus size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updateCardMediaSettings(index, {
+                  backgroundPositionX: 50,
+                  backgroundPositionY: 50,
+                  backgroundZoom: 1,
+                })
+              }
+              className="ml-1 rounded-full border border-amber-200 px-2 py-1 text-[11px] text-zinc-700 hover:bg-amber-100"
+              title="Reset encuadre"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+        <div
+          className={`relative mt-2 overflow-hidden rounded-xl border border-amber-100 bg-zinc-900 touch-none ${
+            activeDragCardIndex === index ? "cursor-grabbing" : "cursor-grab"
+          } ${previewHeightClass}`}
+          onPointerDown={(event) => handleCardPreviewPointerDown(index, event)}
+          onPointerMove={(event) => handleCardPreviewPointerMove(index, event)}
+          onPointerUp={(event) => handleCardPreviewPointerUp(index, event)}
+          onPointerCancel={(event) => handleCardPreviewPointerUp(index, event)}
+        >
+          {previewUrl ? (
+            <>
+              <Image
+                src={previewUrl}
+                alt="Vista previa ajustable de fondo"
+                unoptimized
+                fill
+                className="object-cover"
+                style={{
+                  objectPosition: `${media.positionX}% ${media.positionY}%`,
+                  transform: `scale(${media.zoom})`,
+                }}
+              />
+              <div className="pointer-events-none absolute inset-0 border border-white/15" />
+              <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/30" />
+              <div className="pointer-events-none absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/30" />
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-zinc-300">
+              Aun no hay imagen para previsualizar.
+            </div>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-600">
+          <p>
+            Posicion X/Y: {Math.round(media.positionX)}% / {Math.round(media.positionY)}%
+          </p>
+          <p>
+            Consejo: usa un dedo en celular o arrastra con mouse para ajustar el encuadre en tiempo
+            real.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   function renderColorDot(target: ColorTarget) {
@@ -1482,56 +1620,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   </label>
                 </div>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <label className="text-xs">
-                  <span className="text-zinc-600">Posición horizontal ({Math.round(media.positionX)}%)</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    className="mt-1 w-full"
-                    value={media.positionX}
-                    onChange={(event) =>
-                      updateCardMediaSettings(index, {
-                        backgroundPositionX: Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="text-xs">
-                  <span className="text-zinc-600">Posición vertical ({Math.round(media.positionY)}%)</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    className="mt-1 w-full"
-                    value={media.positionY}
-                    onChange={(event) =>
-                      updateCardMediaSettings(index, {
-                        backgroundPositionY: Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="text-xs">
-                  <span className="text-zinc-600">Zoom ({media.zoom.toFixed(2)}x)</span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={2}
-                    step={0.05}
-                    className="mt-1 w-full"
-                    value={media.zoom}
-                    onChange={(event) =>
-                      updateCardMediaSettings(index, {
-                        backgroundZoom: Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </div>
+              {renderCardInteractiveAdjuster(index, card.backgroundImageUrl || "", {
+                compact: true,
+                previewHeightClass: "h-40",
+              })}
               <button
                 type="button"
                 onClick={() => setCardModalIndex(index)}
@@ -1954,87 +2046,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
 
             {cardModalIndex !== null ? (
               (() => {
-                const media = getCardMediaSettings(cardModalIndex);
                 const previewUrl =
                   cardUploadPreviewUrl || content.homeEventTypes[cardModalIndex]?.backgroundImageUrl || "";
                 return (
-                  <>
-                    <div className="mt-3 grid gap-3 md:grid-cols-3">
-                      <label className="text-xs">
-                        <span className="text-zinc-600">
-                          Posición horizontal ({Math.round(media.positionX)}%)
-                        </span>
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          step={1}
-                          className="mt-1 w-full"
-                          value={media.positionX}
-                          onChange={(event) =>
-                            updateCardMediaSettings(cardModalIndex, {
-                              backgroundPositionX: Number(event.target.value),
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="text-xs">
-                        <span className="text-zinc-600">
-                          Posición vertical ({Math.round(media.positionY)}%)
-                        </span>
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          step={1}
-                          className="mt-1 w-full"
-                          value={media.positionY}
-                          onChange={(event) =>
-                            updateCardMediaSettings(cardModalIndex, {
-                              backgroundPositionY: Number(event.target.value),
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="text-xs">
-                        <span className="text-zinc-600">Zoom ({media.zoom.toFixed(2)}x)</span>
-                        <input
-                          type="range"
-                          min={1}
-                          max={2}
-                          step={0.05}
-                          className="mt-1 w-full"
-                          value={media.zoom}
-                          onChange={(event) =>
-                            updateCardMediaSettings(cardModalIndex, {
-                              backgroundZoom: Number(event.target.value),
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className="mt-3 overflow-hidden rounded-xl border border-amber-100 bg-zinc-900">
-                      {previewUrl ? (
-                        <div className="relative h-48">
-                          <Image
-                            src={previewUrl}
-                            alt="Vista previa del fondo de tarjeta"
-                            unoptimized
-                            fill
-                            className="object-cover"
-                            style={{
-                              objectPosition: `${media.positionX}% ${media.positionY}%`,
-                              transform: `scale(${media.zoom})`,
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-48 items-center justify-center text-sm text-zinc-300">
-                          Aun no hay imagen para previsualizar.
-                        </div>
-                      )}
-                    </div>
-                  </>
+                  renderCardInteractiveAdjuster(cardModalIndex, previewUrl)
                 );
               })()
             ) : null}
