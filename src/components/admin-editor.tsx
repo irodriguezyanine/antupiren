@@ -3,6 +3,8 @@
 import {
   BarChart3,
   ChevronRight,
+  Check,
+  ChevronDown,
   FileText,
   ImagePlus,
   Images,
@@ -76,6 +78,11 @@ type SignedUploadPayload = {
   signature: string;
   folder: string;
   error?: string;
+};
+
+type CustomDropdownOption = {
+  value: string;
+  label: string;
 };
 
 const categoryOptions: EventCategory[] = [
@@ -227,7 +234,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [cardModalIndex, setCardModalIndex] = useState<number | null>(null);
   const [galleryReplaceIndex, setGalleryReplaceIndex] = useState<number | null>(null);
   const [activeDragCardIndex, setActiveDragCardIndex] = useState<number | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<"editor-section" | "gallery-category" | null>(
+    null,
+  );
   const [paletteModalOpen, setPaletteModalOpen] = useState(false);
+  const [heroColorGroupModal, setHeroColorGroupModal] = useState<"background" | "text" | null>(
+    null,
+  );
+  const [showHeroOverlayControls, setShowHeroOverlayControls] = useState(false);
   const [paletteTarget, setPaletteTarget] = useState<SiteColorKey>("sitePrimaryColor");
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorTarget | null>(null);
 
@@ -276,7 +290,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     [heroBackgroundFile],
   );
   const hasHeroImage = Boolean(heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl);
-  const hasPendingHeroFile = Boolean(heroBackgroundFile);
 
   useEffect(() => () => {
     if (galleryUploadPreviewUrl) URL.revokeObjectURL(galleryUploadPreviewUrl);
@@ -293,6 +306,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      if (openDropdown) {
+        setOpenDropdown(null);
+        return;
+      }
       if (colorPickerTarget) {
         setColorPickerTarget(null);
         return;
@@ -307,7 +324,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [colorPickerTarget, paletteModalOpen, editingSection]);
+  }, [openDropdown, colorPickerTarget, paletteModalOpen, editingSection]);
 
   async function saveContent(next: SiteContent): Promise<boolean> {
     setIsSaving(true);
@@ -529,8 +546,9 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }
   }
 
-  async function submitHeroBackgroundUpload() {
-    if (!heroBackgroundFile) {
+  async function submitHeroBackgroundUpload(fileOverride?: File) {
+    const fileToUpload = fileOverride ?? heroBackgroundFile;
+    if (!fileToUpload) {
       setStatus("Selecciona una imagen para el fondo del Hero.");
       return;
     }
@@ -539,7 +557,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     setStatus("");
 
     try {
-      const uploaded = await signedCloudinaryUpload(heroBackgroundFile, "antupiren/hero");
+      const uploaded = await signedCloudinaryUpload(fileToUpload, "antupiren/hero");
       setContent((prev) => ({
         ...prev,
         brand: {
@@ -635,6 +653,25 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     updateCardMediaSettings(index, {
       backgroundZoom: clamp(Number((current.zoom + delta).toFixed(2)), 1, 2.5),
     });
+  }
+
+  function getHeroOverlayPercent(): number {
+    return Math.round((content.brand.heroOverlayOpacity ?? 0.55) * 100);
+  }
+
+  function setHeroOverlayPercent(value: number) {
+    const clamped = clamp(value, 0, 100);
+    setContent((prev) => ({
+      ...prev,
+      brand: {
+        ...prev.brand,
+        heroOverlayOpacity: clamped / 100,
+      },
+    }));
+  }
+
+  function adjustHeroOverlay(delta: number) {
+    setHeroOverlayPercent(getHeroOverlayPercent() + delta);
   }
 
   function updateCardPositionFromPointer(
@@ -870,11 +907,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   function renderCardInteractiveAdjuster(
     index: number,
     previewUrl: string,
-    options?: { compact?: boolean; previewHeightClass?: string },
+    options?: { compact?: boolean },
   ) {
     const media = getCardMediaSettings(index);
     const compact = options?.compact ?? false;
-    const previewHeightClass = options?.previewHeightClass ?? "h-48";
 
     return (
       <div className={`rounded-xl border border-amber-100 bg-white/85 p-3 ${compact ? "" : "mt-3"}`}>
@@ -920,9 +956,9 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           </div>
         </div>
         <div
-          className={`relative mt-2 overflow-hidden rounded-xl border border-amber-100 bg-zinc-900 touch-none ${
+          className={`relative mt-2 mx-auto w-full max-w-[640px] overflow-hidden rounded-xl border border-amber-100 bg-zinc-900 touch-none ${
             activeDragCardIndex === index ? "cursor-grabbing" : "cursor-grab"
-          } ${previewHeightClass}`}
+          } aspect-[2.45/1]`}
           onPointerDown={(event) => handleCardPreviewPointerDown(index, event)}
           onPointerMove={(event) => handleCardPreviewPointerMove(index, event)}
           onPointerUp={(event) => handleCardPreviewPointerUp(index, event)}
@@ -979,6 +1015,75 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         />
         <span className="text-xs text-zinc-600 group-hover:text-zinc-800">{target.label}</span>
       </button>
+    );
+  }
+
+  function renderCustomDropdown({
+    id,
+    value,
+    options,
+    onChange,
+    placeholder,
+    compact = false,
+  }: {
+    id: "editor-section" | "gallery-category";
+    value: string;
+    options: CustomDropdownOption[];
+    onChange: (next: string) => void;
+    placeholder?: string;
+    compact?: boolean;
+  }) {
+    const isOpen = openDropdown === id;
+    const active = options.find((option) => option.value === value);
+    return (
+      <div
+        className="relative"
+        tabIndex={0}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            setOpenDropdown((current) => (current === id ? null : current));
+          }
+        }}
+      >
+        <button
+          type="button"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          onClick={() => setOpenDropdown((current) => (current === id ? null : id))}
+          className={`inline-flex w-full items-center justify-between gap-2 rounded-xl border border-amber-300 bg-white px-3 text-left text-zinc-800 shadow-sm hover:bg-amber-50 ${
+            compact ? "py-1.5 text-xs" : "py-2 text-sm"
+          }`}
+        >
+          <span>{active?.label ?? placeholder ?? "Seleccionar"}</span>
+          <ChevronDown
+            size={compact ? 14 : 16}
+            className={`transition ${isOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {isOpen ? (
+          <div
+            role="listbox"
+            className="absolute left-0 top-[calc(100%+6px)] z-40 w-full overflow-hidden rounded-xl border border-amber-200 bg-white shadow-lg"
+          >
+            {options.map((option) => (
+              <button
+                key={`${id}-${option.value}`}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpenDropdown(null);
+                }}
+                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-amber-50 ${
+                  option.value === value ? "bg-amber-100 text-amber-900" : "text-zinc-700"
+                }`}
+              >
+                <span>{option.label}</span>
+                {option.value === value ? <Check size={14} /> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -1150,17 +1255,15 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
                       Editor
                     </span>
-                    <select
-                      className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs text-zinc-700"
-                      value={activeTab}
-                      onChange={(event) => setActiveTab(event.target.value as AdminTab)}
-                    >
-                      {tabs.map((tab) => (
-                        <option key={tab.id} value={tab.id}>
-                          {tab.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="min-w-44">
+                      {renderCustomDropdown({
+                        id: "editor-section",
+                        value: activeTab,
+                        options: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
+                        onChange: (next) => setActiveTab(next as AdminTab),
+                        compact: true,
+                      })}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -1237,115 +1340,74 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               <p className="mt-1 text-xs text-zinc-500">
                 Define paleta de degradé y/o imagen de fondo con overlay profesional.
               </p>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Colores de fondo
-              </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroGradientFrom",
-                  label: "Inicio",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroGradientVia",
-                  label: "Medio",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroGradientTo",
-                  label: "Final",
-                })}
-                <div className="ml-auto flex items-center gap-2">
-                  <input
-                    ref={heroBackgroundFileRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/webp,image/png"
-                    className="hidden"
-                    onChange={(event) =>
-                      setHeroBackgroundFile(event.target.files?.[0] ?? null)
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHeroColorGroupModal((prev) => (prev === "background" ? null : "background"))
+                  }
+                  className={`rounded-full border px-3 py-1.5 text-xs ${
+                    heroColorGroupModal === "background"
+                      ? "border-amber-500 bg-amber-100 text-amber-900"
+                      : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                  }`}
+                >
+                  Colores de fondo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeroColorGroupModal((prev) => (prev === "text" ? null : "text"))}
+                  className={`rounded-full border px-3 py-1.5 text-xs ${
+                    heroColorGroupModal === "text"
+                      ? "border-amber-500 bg-amber-100 text-amber-900"
+                      : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                  }`}
+                >
+                  Colores texto y botones
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaletteModalOpen(true)}
+                  className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-900 hover:bg-amber-100"
+                >
+                  Paleta activa del sitio
+                </button>
+                <input
+                  ref={heroBackgroundFileRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/webp,image/png"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setHeroBackgroundFile(file);
+                    if (file) {
+                      void submitHeroBackgroundUpload(file);
                     }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => heroBackgroundFileRef.current?.click()}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                    title={hasHeroImage ? "Cambiar imagen Hero" : "Elegir imagen Hero"}
-                  >
-                    <Upload size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={uploadingHeroBackground || (!hasPendingHeroFile && !hasHeroImage)}
-                    onClick={() => {
-                      if (hasHeroImage && !hasPendingHeroFile) {
-                        setContent((prev) => ({
-                          ...prev,
-                          brand: {
-                            ...prev.brand,
-                            heroBackgroundImageUrl: "",
-                            heroBackgroundPublicId: "",
-                          },
-                        }));
-                        return;
-                      }
-                      void submitHeroBackgroundUpload();
-                    }}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-                    title={
-                      hasHeroImage && !hasPendingHeroFile
-                        ? "Quitar foto del Hero"
-                        : "Subir foto del Hero"
-                    }
-                  >
-                    {hasHeroImage && !hasPendingHeroFile ? <X size={14} /> : <Upload size={14} />}
-                  </button>
-                </div>
-              </div>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Colores de texto y botones
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroTextPrimaryColor",
-                  label: "Título",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroTextSecondaryColor",
-                  label: "Subtítulo",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroChipTextColor",
-                  label: "Texto chips",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroChipBackgroundColor",
-                  label: "Fondo chips",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroPrimaryButtonTextColor",
-                  label: "Botón principal texto",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroPrimaryButtonBackgroundColor",
-                  label: "Botón principal fondo",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroSecondaryButtonTextColor",
-                  label: "Botón secundario texto",
-                })}
-                {renderColorDot({
-                  kind: "hero",
-                  field: "heroSecondaryButtonBackgroundColor",
-                  label: "Botón secundario fondo",
-                })}
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingHeroBackground}
+                  onClick={() => heroBackgroundFileRef.current?.click()}
+                  className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                >
+                  {uploadingHeroBackground
+                    ? "Subiendo imagen..."
+                    : hasHeroImage
+                      ? "Cambiar imagen Hero"
+                      : "Elegir y subir imagen Hero"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowHeroOverlayControls((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1.5 text-xs ${
+                    showHeroOverlayControls
+                      ? "border-amber-500 bg-amber-100 text-amber-900"
+                      : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                  }`}
+                >
+                  Overlay {getHeroOverlayPercent()}%
+                </button>
                 <button
                   type="button"
                   onClick={() =>
@@ -1368,33 +1430,105 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                       },
                     }))
                   }
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs text-zinc-700 hover:bg-amber-100"
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs text-zinc-700 hover:bg-amber-100"
                 >
                   <RotateCcw size={12} />
                   Reset Hero
                 </button>
               </div>
-
-              <label className="mt-3 block text-xs">
-                <span className="text-zinc-600">Intensidad del overlay ({Math.round((content.brand.heroOverlayOpacity ?? 0.55) * 100)}%)</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="mt-2 w-full"
-                  value={Math.round((content.brand.heroOverlayOpacity ?? 0.55) * 100)}
-                  onChange={(event) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      brand: {
-                        ...prev.brand,
-                        heroOverlayOpacity: Number(event.target.value) / 100,
-                      },
-                    }))
-                  }
-                />
-              </label>
+              {heroColorGroupModal === "background" ? (
+                <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-amber-100 bg-white p-3">
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroGradientFrom",
+                    label: "Inicio",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroGradientVia",
+                    label: "Medio",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroGradientTo",
+                    label: "Final",
+                  })}
+                </div>
+              ) : null}
+              {heroColorGroupModal === "text" ? (
+                <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-amber-100 bg-white p-3">
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroTextPrimaryColor",
+                    label: "Título",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroTextSecondaryColor",
+                    label: "Subtítulo",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroChipTextColor",
+                    label: "Texto chips",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroChipBackgroundColor",
+                    label: "Fondo chips",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroPrimaryButtonTextColor",
+                    label: "Botón principal texto",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroPrimaryButtonBackgroundColor",
+                    label: "Botón principal fondo",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroSecondaryButtonTextColor",
+                    label: "Botón secundario texto",
+                  })}
+                  {renderColorDot({
+                    kind: "hero",
+                    field: "heroSecondaryButtonBackgroundColor",
+                    label: "Botón secundario fondo",
+                  })}
+                </div>
+              ) : null}
+              {showHeroOverlayControls ? (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-100 bg-white p-2">
+                  <button
+                    type="button"
+                    onClick={() => adjustHeroOverlay(-5)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-200 text-amber-900 hover:bg-amber-100"
+                    title="Bajar overlay"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={getHeroOverlayPercent()}
+                    onChange={(event) => setHeroOverlayPercent(Number(event.target.value || 0))}
+                    className="w-20 rounded-md border border-amber-200 px-2 py-1 text-xs text-zinc-700"
+                  />
+                  <span className="text-xs text-zinc-600">%</span>
+                  <button
+                    type="button"
+                    onClick={() => adjustHeroOverlay(5)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-200 text-amber-900 hover:bg-amber-100"
+                    title="Subir overlay"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : null}
               <p className="mt-2 text-xs text-zinc-500">
                 {heroBackgroundFile?.name ||
                   content.brand.heroBackgroundImageUrl ||
@@ -1469,24 +1603,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-amber-100 bg-white p-4 md:col-span-2">
-              <p className="text-sm font-semibold text-amber-900">Paleta activa del sitio</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(
-                  [
-                    "sitePrimaryColor",
-                    "siteSecondaryColor",
-                    "siteAccentColor",
-                    "siteSurfaceColor",
-                    "siteTextColor",
-                  ] as SiteColorKey[]
-                ).map((field) => (
-                  <span key={field}>
-                    {renderColorDot({ kind: "site", field, label: siteColorLabels[field] })}
-                  </span>
-                ))}
               </div>
             </div>
           </div>
@@ -1622,7 +1738,6 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               </div>
               {renderCardInteractiveAdjuster(index, card.backgroundImageUrl || "", {
                 compact: true,
-                previewHeightClass: "h-40",
               })}
               <button
                 type="button"
@@ -1927,19 +2042,15 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   onChange={(event) => setGalleryUploadTitle(event.target.value)}
                   className="w-full rounded-lg border border-amber-200 px-3 py-2"
                 />
-                <select
-                  value={galleryUploadCategory}
-                  onChange={(event) =>
-                    setGalleryUploadCategory(event.target.value as EventCategory)
-                  }
-                  className="w-full rounded-lg border border-amber-200 px-3 py-2"
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                {renderCustomDropdown({
+                  id: "gallery-category",
+                  value: galleryUploadCategory,
+                  options: categoryOptions.map((option) => ({
+                    value: option,
+                    label: option.charAt(0).toUpperCase() + option.slice(1),
+                  })),
+                  onChange: (next) => setGalleryUploadCategory(next as EventCategory),
+                })}
               </div>
 
               <textarea
