@@ -44,7 +44,18 @@ type ColorTarget =
   | { kind: "site"; field: SiteColorKey; label: string }
   | {
       kind: "hero";
-      field: "heroGradientFrom" | "heroGradientVia" | "heroGradientTo";
+      field:
+        | "heroGradientFrom"
+        | "heroGradientVia"
+        | "heroGradientTo"
+        | "heroTextPrimaryColor"
+        | "heroTextSecondaryColor"
+        | "heroChipTextColor"
+        | "heroChipBackgroundColor"
+        | "heroPrimaryButtonTextColor"
+        | "heroPrimaryButtonBackgroundColor"
+        | "heroSecondaryButtonTextColor"
+        | "heroSecondaryButtonBackgroundColor";
       label: string;
     }
   | {
@@ -137,6 +148,13 @@ const siteColorLabels: Record<SiteColorKey, string> = {
   siteAccentColor: "Color acento",
   siteSurfaceColor: "Color de fondo",
   siteTextColor: "Color de texto",
+};
+const siteColorDefaults: Record<SiteColorKey, string> = {
+  sitePrimaryColor: "#4a2a0a",
+  siteSecondaryColor: "#8a4b1f",
+  siteAccentColor: "#b66a2f",
+  siteSurfaceColor: "#f7f5ef",
+  siteTextColor: "#1f2937",
 };
 
 const largeColorPalette = [
@@ -257,6 +275,8 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     () => (panelBackgroundFile ? URL.createObjectURL(panelBackgroundFile) : ""),
     [panelBackgroundFile],
   );
+  const hasHeroImage = Boolean(heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl);
+  const hasPendingHeroFile = Boolean(heroBackgroundFile);
 
   useEffect(() => () => {
     if (galleryUploadPreviewUrl) URL.revokeObjectURL(galleryUploadPreviewUrl);
@@ -834,9 +854,13 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }));
   }
 
+  function getSiteColor(field: SiteColorKey): string {
+    return content.brand[field] || siteColorDefaults[field];
+  }
+
   function getColorTargetValue(target: ColorTarget): string {
     if (target.kind === "site") {
-      return content.brand[target.field] || "#000000";
+      return getSiteColor(target.field);
     }
     if (target.kind === "hero") {
       return (
@@ -845,6 +869,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           heroGradientFrom: "#2f5a3f",
           heroGradientVia: "#5a3515",
           heroGradientTo: "#2b1a0f",
+          heroTextPrimaryColor: "#ffffff",
+          heroTextSecondaryColor: "#fef3c7",
+          heroChipTextColor: "#ffffff",
+          heroChipBackgroundColor: "rgba(255,255,255,0.18)",
+          heroPrimaryButtonTextColor: "#78350f",
+          heroPrimaryButtonBackgroundColor: "#ffffff",
+          heroSecondaryButtonTextColor: "#ffffff",
+          heroSecondaryButtonBackgroundColor: "rgba(255,255,255,0.10)",
         }[target.field]
       );
     }
@@ -926,7 +958,17 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         <>
           <section className="mb-4 rounded-2xl border border-amber-100 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-amber-900">Secciones editables</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-base font-semibold text-amber-900">Secciones editables</h2>
+                <button
+                  type="button"
+                  onClick={() => setPaletteModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-3 py-1.5 text-xs text-amber-900 hover:bg-amber-100"
+                >
+                  <Palette size={13} />
+                  Paleta global
+                </button>
+              </div>
               <p className="text-xs text-zinc-500">
                 Selecciona una sección para abrir su editor avanzado.
               </p>
@@ -996,17 +1038,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           className="space-y-4 rounded-xl border border-amber-100 p-5"
           style={getPanelContainerStyle("inicio")}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-amber-900">Editor de Inicio</h2>
-            <button
-              type="button"
-              onClick={() => setPaletteModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
-            >
-              <Palette size={14} />
-              Configurar paleta del sitio
-            </button>
-          </div>
+          <h2 className="text-lg font-semibold text-amber-900">Editor de Inicio</h2>
           {renderPanelBackgroundEditor("inicio")}
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm">
@@ -1067,7 +1099,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               <p className="mt-1 text-xs text-zinc-500">
                 Define paleta de degradé y/o imagen de fondo con overlay profesional.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Colores de fondo
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 {renderColorDot({
                   kind: "hero",
                   field: "heroGradientFrom",
@@ -1083,6 +1118,96 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   field: "heroGradientTo",
                   label: "Final",
                 })}
+                <div className="ml-auto flex items-center gap-2">
+                  <input
+                    ref={heroBackgroundFileRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/webp,image/png"
+                    className="hidden"
+                    onChange={(event) =>
+                      setHeroBackgroundFile(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => heroBackgroundFileRef.current?.click()}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                    title={hasHeroImage ? "Cambiar imagen Hero" : "Elegir imagen Hero"}
+                  >
+                    <Upload size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={uploadingHeroBackground || (!hasPendingHeroFile && !hasHeroImage)}
+                    onClick={() => {
+                      if (hasHeroImage && !hasPendingHeroFile) {
+                        setContent((prev) => ({
+                          ...prev,
+                          brand: {
+                            ...prev.brand,
+                            heroBackgroundImageUrl: "",
+                            heroBackgroundPublicId: "",
+                          },
+                        }));
+                        return;
+                      }
+                      void submitHeroBackgroundUpload();
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+                    title={
+                      hasHeroImage && !hasPendingHeroFile
+                        ? "Quitar foto del Hero"
+                        : "Subir foto del Hero"
+                    }
+                  >
+                    {hasHeroImage && !hasPendingHeroFile ? <X size={14} /> : <Upload size={14} />}
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Colores de texto y botones
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroTextPrimaryColor",
+                  label: "Título",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroTextSecondaryColor",
+                  label: "Subtítulo",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroChipTextColor",
+                  label: "Texto chips",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroChipBackgroundColor",
+                  label: "Fondo chips",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroPrimaryButtonTextColor",
+                  label: "Botón principal texto",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroPrimaryButtonBackgroundColor",
+                  label: "Botón principal fondo",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroSecondaryButtonTextColor",
+                  label: "Botón secundario texto",
+                })}
+                {renderColorDot({
+                  kind: "hero",
+                  field: "heroSecondaryButtonBackgroundColor",
+                  label: "Botón secundario fondo",
+                })}
                 <button
                   type="button"
                   onClick={() =>
@@ -1094,6 +1219,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                         heroGradientVia: "#5a3515",
                         heroGradientTo: "#2b1a0f",
                         heroOverlayOpacity: 0.55,
+                        heroTextPrimaryColor: "#ffffff",
+                        heroTextSecondaryColor: "#fef3c7",
+                        heroChipTextColor: "#ffffff",
+                        heroChipBackgroundColor: "rgba(255,255,255,0.18)",
+                        heroPrimaryButtonTextColor: "#78350f",
+                        heroPrimaryButtonBackgroundColor: "#ffffff",
+                        heroSecondaryButtonTextColor: "#ffffff",
+                        heroSecondaryButtonBackgroundColor: "rgba(255,255,255,0.10)",
                       },
                     }))
                   }
@@ -1124,72 +1257,81 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   }
                 />
               </label>
+              <p className="mt-2 text-xs text-zinc-500">
+                {heroBackgroundFile?.name ||
+                  content.brand.heroBackgroundImageUrl ||
+                  "Sin imagen de fondo seleccionada"}
+              </p>
 
-              <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-white p-3">
-                <input
-                  ref={heroBackgroundFileRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/webp,image/png"
-                  className="hidden"
-                  onChange={(event) =>
-                    setHeroBackgroundFile(event.target.files?.[0] ?? null)
-                  }
+              <div className="relative mt-3 overflow-hidden rounded-xl border border-amber-100">
+                <div
+                  className="h-44 bg-cover bg-center"
+                  style={{
+                    backgroundImage: (heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl)
+                      ? `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%), url(${heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl})`
+                      : `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%)`,
+                    backgroundBlendMode:
+                      heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl
+                        ? "overlay"
+                        : "normal",
+                  }}
                 />
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => heroBackgroundFileRef.current?.click()}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                    title="Elegir imagen Hero"
+                {(heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl) ? (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundColor: `rgba(0,0,0,${Math.min(Math.max(content.brand.heroOverlayOpacity ?? 0.55, 0), 1)})`,
+                    }}
+                  />
+                ) : null}
+                <div className="absolute inset-0 z-10 p-4">
+                  <span
+                    className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                    style={{
+                      color: content.brand.heroChipTextColor || "#ffffff",
+                      backgroundColor:
+                        content.brand.heroChipBackgroundColor || "rgba(255,255,255,0.18)",
+                    }}
                   >
-                    <Upload size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={uploadingHeroBackground}
-                    onClick={submitHeroBackgroundUpload}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-                    title="Subir imagen Hero"
+                    El centro de eventos de Peñalolén
+                  </span>
+                  <p
+                    className="mt-2 text-lg font-semibold leading-tight"
+                    style={{ color: content.brand.heroTextPrimaryColor || "#ffffff" }}
                   >
-                    <Upload size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setContent((prev) => ({
-                        ...prev,
-                        brand: {
-                          ...prev.brand,
-                          heroBackgroundImageUrl: "",
-                          heroBackgroundPublicId: "",
-                        },
-                      }))
-                    }
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-300 text-amber-900 hover:bg-amber-100"
-                    title="Quitar imagen Hero"
+                    {content.brand.heroTitle || "Tu historia empieza aquí"}
+                  </p>
+                  <p
+                    className="mt-1 max-w-xl text-xs"
+                    style={{ color: content.brand.heroTextSecondaryColor || "#fef3c7" }}
                   >
-                    <X size={14} />
-                  </button>
+                    {content.brand.heroSubtitle ||
+                      "Matrimonios, eventos corporativos, activaciones y celebraciones en Peñalolén."}
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <span
+                      className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold"
+                      style={{
+                        color: content.brand.heroPrimaryButtonTextColor || "#78350f",
+                        backgroundColor: content.brand.heroPrimaryButtonBackgroundColor || "#ffffff",
+                      }}
+                    >
+                      Cotiza por WhatsApp
+                    </span>
+                    <span
+                      className="inline-flex rounded-full border border-white/30 px-3 py-1 text-[11px] font-semibold"
+                      style={{
+                        color: content.brand.heroSecondaryButtonTextColor || "#ffffff",
+                        backgroundColor:
+                          content.brand.heroSecondaryButtonBackgroundColor ||
+                          "rgba(255,255,255,0.10)",
+                      }}
+                    >
+                      Ver galería
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-zinc-500">
-                  {heroBackgroundFile?.name ||
-                    content.brand.heroBackgroundImageUrl ||
-                    "Sin imagen de fondo seleccionada"}
-                </p>
               </div>
-
-              <div
-                className="mt-3 h-32 rounded-xl border border-amber-100 bg-cover bg-center"
-                style={{
-                  backgroundImage: (heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl)
-                    ? `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%), url(${heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl})`
-                    : `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%)`,
-                  backgroundBlendMode:
-                    heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl
-                      ? "overlay"
-                      : "normal",
-                }}
-              />
             </div>
             <div className="rounded-xl border border-amber-100 bg-white p-4 md:col-span-2">
               <p className="text-sm font-semibold text-amber-900">Paleta activa del sitio</p>
@@ -2054,7 +2196,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 >
                   <span
                     className="h-6 w-6 rounded-full border border-white shadow ring-1 ring-black/10"
-                    style={{ backgroundColor: content.brand[field] || "#000000" }}
+                    style={{ backgroundColor: getSiteColor(field) }}
                   />
                   <span className="text-xs text-zinc-700">{siteColorLabels[field]}</span>
                 </button>
