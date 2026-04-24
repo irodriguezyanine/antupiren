@@ -11,6 +11,9 @@ export type EventTypeCard = {
   href: string;
   backgroundImageUrl?: string;
   backgroundPublicId?: string;
+  backgroundPositionX?: number;
+  backgroundPositionY?: number;
+  backgroundZoom?: number;
 };
 
 export type Stat = {
@@ -52,6 +55,15 @@ export type PageSectionConfig = {
   enabled: boolean;
 };
 
+export type AdminEditorPanelStyle = {
+  gradientFrom?: string;
+  gradientVia?: string;
+  gradientTo?: string;
+  backgroundImageUrl?: string;
+  backgroundPublicId?: string;
+  overlayOpacity?: number;
+};
+
 export type ContactConfig = {
   phoneLabel: string;
   whatsappNumber: string;
@@ -70,6 +82,17 @@ export type SiteContent = {
     heroTitle: string;
     heroSubtitle: string;
     valueProposition: string;
+    heroGradientFrom?: string;
+    heroGradientVia?: string;
+    heroGradientTo?: string;
+    heroBackgroundImageUrl?: string;
+    heroBackgroundPublicId?: string;
+    heroOverlayOpacity?: number;
+    sitePrimaryColor?: string;
+    siteSecondaryColor?: string;
+    siteAccentColor?: string;
+    siteSurfaceColor?: string;
+    siteTextColor?: string;
   };
   stats: Stat[];
   homeEventTypes: EventTypeCard[];
@@ -96,5 +119,15 @@ export type SiteContent = {
   testimonials: Testimonial[];
   gallery: GalleryItem[];
   contact: ContactConfig;
+  adminEditor?: {
+    panelStyles?: {
+      inicio?: AdminEditorPanelStyle;
+      secciones?: AdminEditorPanelStyle;
+      tarjetas?: AdminEditorPanelStyle;
+      galeria?: AdminEditorPanelStyle;
+      testimonios?: AdminEditorPanelStyle;
+      contacto?: AdminEditorPanelStyle;
+    };
+  };
   updatedAt: string;
 };

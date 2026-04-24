@@ -60,6 +60,11 @@ export default async function HomePage() {
           badge="El centro de eventos de Peñalolén"
           ctaLabel="Cotiza por WhatsApp"
           ctaHref={whatsappLink}
+          gradientFrom={content.brand.heroGradientFrom}
+          gradientVia={content.brand.heroGradientVia}
+          gradientTo={content.brand.heroGradientTo}
+          backgroundImageUrl={content.brand.heroBackgroundImageUrl}
+          overlayOpacity={content.brand.heroOverlayOpacity}
         />
 
         <section className="rounded-3xl border border-amber-100 bg-white p-6">

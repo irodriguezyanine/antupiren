@@ -11,6 +11,15 @@ export const seedContent: SiteContent = {
       "Matrimonios, eventos corporativos, activaciones de marca y celebraciones sociales en Peñalolén.",
     valueProposition:
       "El centro de eventos de Peñalolén: cercano, versátil y pensado para convertir cada encuentro en un recuerdo inolvidable.",
+    heroGradientFrom: "#2f5a3f",
+    heroGradientVia: "#5a3515",
+    heroGradientTo: "#2b1a0f",
+    heroOverlayOpacity: 0.55,
+    sitePrimaryColor: "#4a2a0a",
+    siteSecondaryColor: "#8a4b1f",
+    siteAccentColor: "#b66a2f",
+    siteSurfaceColor: "#f7f5ef",
+    siteTextColor: "#1f2937",
   },
   stats: [
     { label: "Años de trayectoria", value: "12+" },
@@ -289,6 +298,46 @@ export const seedContent: SiteContent = {
     facebookUrl: "https://facebook.com/antupirencentrodeeventos",
     mapEmbedUrl:
       "https://www.google.com/maps?q=Antupir%C3%A9n%209501%2C%20Pe%C3%B1alol%C3%A9n%2C%20Santiago%2C%20Chile&output=embed",
+  },
+  adminEditor: {
+    panelStyles: {
+      inicio: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+      secciones: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+      tarjetas: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+      galeria: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+      testimonios: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+      contacto: {
+        gradientFrom: "#f7f5ef",
+        gradientVia: "#efe2d2",
+        gradientTo: "#f9f3e8",
+        overlayOpacity: 0,
+      },
+    },
   },
   updatedAt: new Date().toISOString(),
 };

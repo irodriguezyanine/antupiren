@@ -8,6 +8,11 @@
   --brand-500: #b66a2f;
   --brand-100: #f5e6d7;
   --surface: #fffdf8;
+  --site-primary: #4a2a0a;
+  --site-secondary: #8a4b1f;
+  --site-accent: #b66a2f;
+  --site-surface: #f7f5ef;
+  --site-text: #1f2937;
 }
 
 @theme inline {
@@ -51,4 +56,60 @@ a {
 
 .section-spacing {
   margin-top: 4rem;
+}
+
+.theme-scope {
+  color: var(--site-text);
+}
+
+.theme-scope .text-amber-900 {
+  color: var(--site-primary) !important;
+}
+
+.theme-scope .text-amber-800,
+.theme-scope .text-amber-700 {
+  color: var(--site-secondary) !important;
+}
+
+.theme-scope .text-zinc-900,
+.theme-scope .text-zinc-800,
+.theme-scope .text-zinc-700,
+.theme-scope .text-zinc-600,
+.theme-scope .text-zinc-500 {
+  color: var(--site-text) !important;
+}
+
+.theme-scope .border-amber-300 {
+  border-color: color-mix(in oklab, var(--site-accent) 55%, white 45%) !important;
+}
+
+.theme-scope .border-amber-200 {
+  border-color: color-mix(in oklab, var(--site-accent) 40%, white 60%) !important;
+}
+
+.theme-scope .border-amber-100 {
+  border-color: color-mix(in oklab, var(--site-accent) 22%, white 78%) !important;
+}
+
+.theme-scope .bg-amber-50,
+.theme-scope .bg-amber-50\/30,
+.theme-scope .bg-amber-50\/40,
+.theme-scope .bg-amber-50\/50 {
+  background-color: color-mix(in oklab, var(--site-surface) 86%, var(--site-accent) 14%) !important;
+}
+
+.theme-scope .bg-amber-100 {
+  background-color: color-mix(in oklab, var(--site-surface) 70%, var(--site-accent) 30%) !important;
+}
+
+.theme-scope .bg-amber-700 {
+  background-color: var(--site-secondary) !important;
+}
+
+.theme-scope .hover\:bg-amber-800:hover {
+  background-color: color-mix(in oklab, var(--site-secondary) 82%, black 18%) !important;
+}
+
+.theme-scope .hover\:bg-amber-100:hover {
+  background-color: color-mix(in oklab, var(--site-surface) 65%, var(--site-accent) 35%) !important;
 }

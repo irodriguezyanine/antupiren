@@ -7,11 +7,45 @@ type HeroProps = {
   ctaLabel: string;
   ctaHref: string;
   badge?: string;
+  gradientFrom?: string;
+  gradientVia?: string;
+  gradientTo?: string;
+  backgroundImageUrl?: string;
+  overlayOpacity?: number;
 };
 
-export function Hero({ title, subtitle, ctaLabel, ctaHref, badge }: HeroProps) {
+export function Hero({
+  title,
+  subtitle,
+  ctaLabel,
+  ctaHref,
+  badge,
+  gradientFrom = "#2f5a3f",
+  gradientVia = "#5a3515",
+  gradientTo = "#2b1a0f",
+  backgroundImageUrl,
+  overlayOpacity = 0.55,
+}: HeroProps) {
+  const gradientLayer = `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientVia} 48%, ${gradientTo} 100%)`;
+  const backgroundLayers = backgroundImageUrl
+    ? `${gradientLayer}, url(${backgroundImageUrl})`
+    : gradientLayer;
+
   return (
-    <section className="brand-gradient soft-shadow relative overflow-hidden rounded-3xl px-6 py-12 text-white sm:px-10 sm:py-14">
+    <section
+      className="soft-shadow relative overflow-hidden rounded-3xl px-6 py-12 text-white sm:px-10 sm:py-14"
+      style={{
+        backgroundImage: backgroundLayers,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {backgroundImageUrl ? (
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: `rgba(0,0,0,${Math.min(Math.max(overlayOpacity, 0), 1)})` }}
+        />
+      ) : null}
       <div className="absolute -left-14 top-10 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute -right-16 bottom-5 h-40 w-40 rounded-full bg-green-200/20 blur-2xl" />
       <div className="relative z-10">
