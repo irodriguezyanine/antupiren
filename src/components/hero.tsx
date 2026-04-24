@@ -12,6 +12,14 @@ type HeroProps = {
   gradientTo?: string;
   backgroundImageUrl?: string;
   overlayOpacity?: number;
+  textPrimaryColor?: string;
+  textSecondaryColor?: string;
+  chipTextColor?: string;
+  chipBackgroundColor?: string;
+  primaryButtonTextColor?: string;
+  primaryButtonBackgroundColor?: string;
+  secondaryButtonTextColor?: string;
+  secondaryButtonBackgroundColor?: string;
 };
 
 export function Hero({
@@ -25,6 +33,14 @@ export function Hero({
   gradientTo = "#2b1a0f",
   backgroundImageUrl,
   overlayOpacity = 0.55,
+  textPrimaryColor = "#ffffff",
+  textSecondaryColor = "#fef3c7",
+  chipTextColor = "#ffffff",
+  chipBackgroundColor = "rgba(255,255,255,0.18)",
+  primaryButtonTextColor = "#78350f",
+  primaryButtonBackgroundColor = "#ffffff",
+  secondaryButtonTextColor = "#ffffff",
+  secondaryButtonBackgroundColor = "rgba(255,255,255,0.10)",
 }: HeroProps) {
   const gradientLayer = `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientVia} 48%, ${gradientTo} 100%)`;
   const backgroundLayers = backgroundImageUrl
@@ -50,20 +66,36 @@ export function Hero({
       <div className="absolute -right-16 bottom-5 h-40 w-40 rounded-full bg-green-200/20 blur-2xl" />
       <div className="relative z-10">
         {badge ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs uppercase tracking-widest">
+          <span
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-widest"
+            style={{ color: chipTextColor, backgroundColor: chipBackgroundColor }}
+          >
             <Sparkles size={12} />
             {badge}
           </span>
         ) : null}
-        <h1 className="headline mt-4 max-w-3xl text-3xl font-semibold leading-tight sm:text-5xl">{title}</h1>
-        <p className="mt-4 max-w-2xl text-sm text-amber-50 sm:text-base">{subtitle}</p>
+        <h1
+          className="headline mt-4 max-w-3xl text-3xl font-semibold leading-tight sm:text-5xl"
+          style={{ color: textPrimaryColor }}
+        >
+          {title}
+        </h1>
+        <p className="mt-4 max-w-2xl text-sm sm:text-base" style={{ color: textSecondaryColor }}>
+          {subtitle}
+        </p>
 
-        <div className="mt-5 flex flex-wrap gap-3 text-xs text-amber-50/90">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1">
+        <div className="mt-5 flex flex-wrap gap-3 text-xs" style={{ color: textSecondaryColor }}>
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1"
+            style={{ backgroundColor: chipBackgroundColor, color: chipTextColor }}
+          >
             <MapPin size={12} />
             Peñalolén, Santiago
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1"
+            style={{ backgroundColor: chipBackgroundColor, color: chipTextColor }}
+          >
             <CalendarClock size={12} />
             Agenda tu visita hoy
           </span>
@@ -73,13 +105,21 @@ export function Hero({
           <Link
             href={ctaHref}
             target="_blank"
-            className="inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
+            className="inline-flex rounded-full px-6 py-3 text-sm font-semibold transition hover:opacity-90"
+            style={{
+              color: primaryButtonTextColor,
+              backgroundColor: primaryButtonBackgroundColor,
+            }}
           >
             {ctaLabel}
           </Link>
           <Link
             href="/galeria"
-            className="inline-flex rounded-full border border-white/30 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+            className="inline-flex rounded-full border border-white/30 px-6 py-3 text-sm font-semibold transition hover:opacity-90"
+            style={{
+              color: secondaryButtonTextColor,
+              backgroundColor: secondaryButtonBackgroundColor,
+            }}
           >
             Ver galería
           </Link>

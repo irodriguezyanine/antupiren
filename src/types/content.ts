@@ -88,6 +88,14 @@ export type SiteContent = {
     heroBackgroundImageUrl?: string;
     heroBackgroundPublicId?: string;
     heroOverlayOpacity?: number;
+    heroTextPrimaryColor?: string;
+    heroTextSecondaryColor?: string;
+    heroChipTextColor?: string;
+    heroChipBackgroundColor?: string;
+    heroPrimaryButtonTextColor?: string;
+    heroPrimaryButtonBackgroundColor?: string;
+    heroSecondaryButtonTextColor?: string;
+    heroSecondaryButtonBackgroundColor?: string;
     sitePrimaryColor?: string;
     siteSecondaryColor?: string;
     siteAccentColor?: string;

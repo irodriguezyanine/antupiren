@@ -65,6 +65,14 @@ export default async function HomePage() {
           gradientTo={content.brand.heroGradientTo}
           backgroundImageUrl={content.brand.heroBackgroundImageUrl}
           overlayOpacity={content.brand.heroOverlayOpacity}
+          textPrimaryColor={content.brand.heroTextPrimaryColor}
+          textSecondaryColor={content.brand.heroTextSecondaryColor}
+          chipTextColor={content.brand.heroChipTextColor}
+          chipBackgroundColor={content.brand.heroChipBackgroundColor}
+          primaryButtonTextColor={content.brand.heroPrimaryButtonTextColor}
+          primaryButtonBackgroundColor={content.brand.heroPrimaryButtonBackgroundColor}
+          secondaryButtonTextColor={content.brand.heroSecondaryButtonTextColor}
+          secondaryButtonBackgroundColor={content.brand.heroSecondaryButtonBackgroundColor}
         />
 
         <section className="rounded-3xl border border-amber-100 bg-white p-6">
