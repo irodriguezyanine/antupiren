@@ -1,11 +1,11 @@
 "use client";
 
-import { ImagePlus, Pencil, Upload, X } from "lucide-react";
+import { ImagePlus, Palette, Pencil, Upload, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
-import type { EventCategory, SiteContent } from "@/types/content";
+import type { AdminEditorPanelStyle, EventCategory, SiteContent } from "@/types/content";
 
 type AdminEditorProps = {
   initialContent: SiteContent;
@@ -18,8 +18,15 @@ type AdminTab =
   | "galeria"
   | "testimonios"
   | "contacto";
+type MainAdminTab = "editor" | "estadisticas" | "calendario";
 
 type PageKey = keyof SiteContent["pages"];
+type SiteColorKey =
+  | "sitePrimaryColor"
+  | "siteSecondaryColor"
+  | "siteAccentColor"
+  | "siteSurfaceColor"
+  | "siteTextColor";
 
 type SignedUploadPayload = {
   ok: boolean;
@@ -57,16 +64,87 @@ const tabs: { id: AdminTab; label: string }[] = [
   { id: "testimonios", label: "Testimonios" },
   { id: "contacto", label: "Contacto" },
 ];
+const mainTabs: { id: MainAdminTab; label: string }[] = [
+  { id: "editor", label: "Editor" },
+  { id: "estadisticas", label: "Estadísticas" },
+  { id: "calendario", label: "Calendario" },
+];
+
+const siteColorLabels: Record<SiteColorKey, string> = {
+  sitePrimaryColor: "Color primario",
+  siteSecondaryColor: "Color secundario",
+  siteAccentColor: "Color acento",
+  siteSurfaceColor: "Color de fondo",
+  siteTextColor: "Color de texto",
+};
+
+const largeColorPalette = [
+  "#0f172a",
+  "#1e293b",
+  "#334155",
+  "#475569",
+  "#64748b",
+  "#0b3b2e",
+  "#14532d",
+  "#166534",
+  "#047857",
+  "#0f766e",
+  "#155e75",
+  "#1d4ed8",
+  "#1e40af",
+  "#1d4ed8",
+  "#2563eb",
+  "#4f46e5",
+  "#4338ca",
+  "#6d28d9",
+  "#7c3aed",
+  "#9333ea",
+  "#a21caf",
+  "#be185d",
+  "#c026d3",
+  "#db2777",
+  "#be123c",
+  "#e11d48",
+  "#b91c1c",
+  "#dc2626",
+  "#ea580c",
+  "#f97316",
+  "#d97706",
+  "#ca8a04",
+  "#65a30d",
+  "#16a34a",
+  "#22c55e",
+  "#84cc16",
+  "#0ea5e9",
+  "#06b6d4",
+  "#14b8a6",
+  "#2dd4bf",
+  "#4ade80",
+  "#f59e0b",
+  "#eab308",
+  "#f43f5e",
+  "#fb7185",
+  "#f472b6",
+  "#f5f5f4",
+  "#e7e5e4",
+  "#d6d3d1",
+  "#a8a29e",
+  "#78716c",
+  "#57534e",
+];
 
 export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [content, setContent] = useState<SiteContent>(initialContent);
   const [status, setStatus] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState<MainAdminTab>("editor");
   const [activeTab, setActiveTab] = useState<AdminTab>("inicio");
 
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [cardModalIndex, setCardModalIndex] = useState<number | null>(null);
   const [galleryReplaceIndex, setGalleryReplaceIndex] = useState<number | null>(null);
+  const [paletteModalOpen, setPaletteModalOpen] = useState(false);
+  const [paletteTarget, setPaletteTarget] = useState<SiteColorKey>("sitePrimaryColor");
 
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [uploadingCard, setUploadingCard] = useState(false);
@@ -80,10 +158,17 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
   const [galleryUploadFile, setGalleryUploadFile] = useState<File | null>(null);
   const [cardUploadFile, setCardUploadFile] = useState<File | null>(null);
   const [galleryReplaceFile, setGalleryReplaceFile] = useState<File | null>(null);
+  const [heroBackgroundFile, setHeroBackgroundFile] = useState<File | null>(null);
+  const [uploadingHeroBackground, setUploadingHeroBackground] = useState(false);
+  const [panelBackgroundFile, setPanelBackgroundFile] = useState<File | null>(null);
+  const [panelBackgroundTarget, setPanelBackgroundTarget] = useState<AdminTab | null>(null);
+  const [uploadingPanelBackground, setUploadingPanelBackground] = useState(false);
 
   const galleryFileRef = useRef<HTMLInputElement | null>(null);
   const cardFileRef = useRef<HTMLInputElement | null>(null);
   const galleryReplaceFileRef = useRef<HTMLInputElement | null>(null);
+  const heroBackgroundFileRef = useRef<HTMLInputElement | null>(null);
+  const panelBackgroundFileRef = useRef<HTMLInputElement | null>(null);
 
   const activeTestimonials = useMemo(
     () => content.testimonials.filter((item) => item.enabled).length,
@@ -310,6 +395,37 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }
   }
 
+  async function submitHeroBackgroundUpload() {
+    if (!heroBackgroundFile) {
+      setStatus("Selecciona una imagen para el fondo del Hero.");
+      return;
+    }
+
+    setUploadingHeroBackground(true);
+    setStatus("");
+
+    try {
+      const uploaded = await signedCloudinaryUpload(heroBackgroundFile, "antupiren/hero");
+      setContent((prev) => ({
+        ...prev,
+        brand: {
+          ...prev.brand,
+          heroBackgroundImageUrl: uploaded.secureUrl,
+          heroBackgroundPublicId: uploaded.publicId,
+        },
+        updatedAt: new Date().toISOString(),
+      }));
+      setHeroBackgroundFile(null);
+      setStatus("Fondo del Hero actualizado. Guarda todo para publicar.");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "No se pudo subir fondo del Hero.",
+      );
+    } finally {
+      setUploadingHeroBackground(false);
+    }
+  }
+
   function updatePage(pageKey: PageKey, field: string, value: string | boolean) {
     setContent((prev) => ({
       ...prev,
@@ -354,6 +470,203 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }));
   }
 
+  function getPanelStyle(tabId: AdminTab): Required<AdminEditorPanelStyle> {
+    const style = content.adminEditor?.panelStyles?.[tabId] ?? {};
+    return {
+      gradientFrom: style.gradientFrom ?? "#f7f5ef",
+      gradientVia: style.gradientVia ?? "#efe2d2",
+      gradientTo: style.gradientTo ?? "#f9f3e8",
+      backgroundImageUrl: style.backgroundImageUrl ?? "",
+      backgroundPublicId: style.backgroundPublicId ?? "",
+      overlayOpacity: style.overlayOpacity ?? 0,
+    };
+  }
+
+  function updatePanelStyle(tabId: AdminTab, patch: Partial<AdminEditorPanelStyle>) {
+    setContent((prev) => {
+      const current = prev.adminEditor?.panelStyles?.[tabId] ?? {};
+      return {
+        ...prev,
+        adminEditor: {
+          panelStyles: {
+            ...(prev.adminEditor?.panelStyles ?? {}),
+            [tabId]: {
+              ...current,
+              ...patch,
+            },
+          },
+        },
+      };
+    });
+  }
+
+  async function submitPanelBackgroundUpload(tabId: AdminTab) {
+    if (!panelBackgroundFile) {
+      setStatus("Selecciona una imagen para el fondo de la tarjeta principal.");
+      return;
+    }
+
+    setUploadingPanelBackground(true);
+    setStatus("");
+
+    try {
+      const uploaded = await signedCloudinaryUpload(
+        panelBackgroundFile,
+        `antupiren/editor-panels/${tabId}`,
+      );
+      updatePanelStyle(tabId, {
+        backgroundImageUrl: uploaded.secureUrl,
+        backgroundPublicId: uploaded.publicId,
+      });
+      setPanelBackgroundFile(null);
+      setPanelBackgroundTarget(null);
+      setStatus("Fondo de la tarjeta principal actualizado. Guarda todo para publicar.");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "No se pudo subir el fondo de la tarjeta.",
+      );
+    } finally {
+      setUploadingPanelBackground(false);
+    }
+  }
+
+  function renderPanelBackgroundEditor(tabId: AdminTab) {
+    const style = getPanelStyle(tabId);
+    const overlayPercent = Math.round(style.overlayOpacity * 100);
+
+    return (
+      <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+        <p className="text-sm font-semibold text-amber-900">Fondo de tarjeta principal</p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Configura degradé + imagen para la tarjeta principal de esta pestaña.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <label className="text-xs">
+            <span className="text-zinc-600">Color inicial</span>
+            <input
+              type="color"
+              className="mt-1 h-10 w-full rounded-md border border-amber-200"
+              value={style.gradientFrom}
+              onChange={(event) => updatePanelStyle(tabId, { gradientFrom: event.target.value })}
+            />
+          </label>
+          <label className="text-xs">
+            <span className="text-zinc-600">Color medio</span>
+            <input
+              type="color"
+              className="mt-1 h-10 w-full rounded-md border border-amber-200"
+              value={style.gradientVia}
+              onChange={(event) => updatePanelStyle(tabId, { gradientVia: event.target.value })}
+            />
+          </label>
+          <label className="text-xs">
+            <span className="text-zinc-600">Color final</span>
+            <input
+              type="color"
+              className="mt-1 h-10 w-full rounded-md border border-amber-200"
+              value={style.gradientTo}
+              onChange={(event) => updatePanelStyle(tabId, { gradientTo: event.target.value })}
+            />
+          </label>
+        </div>
+        <label className="mt-3 block text-xs">
+          <span className="text-zinc-600">Intensidad overlay ({overlayPercent}%)</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            className="mt-2 w-full"
+            value={overlayPercent}
+            onChange={(event) =>
+              updatePanelStyle(tabId, { overlayOpacity: Number(event.target.value) / 100 })
+            }
+          />
+        </label>
+        <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-white p-3">
+          <input
+            ref={panelBackgroundFileRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/webp,image/png"
+            className="hidden"
+            onChange={(event) => setPanelBackgroundFile(event.target.files?.[0] ?? null)}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPanelBackgroundTarget(tabId);
+                panelBackgroundFileRef.current?.click();
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              <Upload size={14} />
+              Elegir imagen
+            </button>
+            <button
+              type="button"
+              disabled={uploadingPanelBackground || panelBackgroundTarget !== tabId}
+              onClick={() => submitPanelBackgroundUpload(tabId)}
+              className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+            >
+              {uploadingPanelBackground && panelBackgroundTarget === tabId
+                ? "Subiendo..."
+                : "Subir imagen"}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updatePanelStyle(tabId, {
+                  backgroundImageUrl: "",
+                  backgroundPublicId: "",
+                })
+              }
+              className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              Quitar imagen
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {panelBackgroundTarget === tabId && panelBackgroundFile
+              ? panelBackgroundFile.name
+              : style.backgroundImageUrl || "Sin imagen seleccionada"}
+          </p>
+        </div>
+        <div
+          className="mt-3 h-28 rounded-xl border border-amber-100 bg-cover bg-center"
+          style={{
+            backgroundImage: style.backgroundImageUrl
+              ? `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%), url(${style.backgroundImageUrl})`
+              : `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%)`,
+            backgroundBlendMode: style.backgroundImageUrl ? "overlay" : "normal",
+          }}
+        />
+      </div>
+    );
+  }
+
+  function getPanelContainerStyle(tabId: AdminTab) {
+    const style = getPanelStyle(tabId);
+    return {
+      backgroundImage: style.backgroundImageUrl
+        ? `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%), url(${style.backgroundImageUrl})`
+        : `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%)`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundBlendMode: style.backgroundImageUrl ? "overlay" : "normal",
+    };
+  }
+
+  function updateSiteColor(field: SiteColorKey, value: string) {
+    setContent((prev) => ({
+      ...prev,
+      brand: {
+        ...prev.brand,
+        [field]: value,
+      },
+    }));
+  }
+
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -389,31 +702,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         </div>
       </div>
 
-      <section className="mb-6 grid gap-4 sm:grid-cols-3">
-        <article className="rounded-xl border border-amber-100 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Última actualización</p>
-          <p className="mt-1 text-sm font-semibold text-amber-900">
-            {new Date(content.updatedAt).toISOString().slice(0, 19).replace("T", " ")}
-          </p>
-        </article>
-        <article className="rounded-xl border border-amber-100 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Testimonios activos</p>
-          <p className="mt-1 text-sm font-semibold text-amber-900">{activeTestimonials}</p>
-        </article>
-        <article className="rounded-xl border border-amber-100 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Fotos cargadas</p>
-          <p className="mt-1 text-sm font-semibold text-amber-900">{content.gallery.length}</p>
-        </article>
-      </section>
-
-      <section className="mb-4 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
+      <section className="mb-6 flex flex-wrap gap-2">
+        {mainTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActiveMainTab(tab.id)}
             className={`rounded-full px-4 py-2 text-sm ${
-              activeTab === tab.id
+              activeMainTab === tab.id
                 ? "bg-amber-700 font-semibold text-white"
                 : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
             }`}
@@ -423,9 +719,42 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         ))}
       </section>
 
+      {activeMainTab === "editor" ? (
+        <>
+          <section className="mb-4 flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-2 text-sm ${
+                  activeTab === tab.id
+                    ? "bg-amber-700 font-semibold text-white"
+                    : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </section>
+
       {activeTab === "inicio" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
-          <h2 className="text-lg font-semibold text-amber-900">Editor de Inicio</h2>
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("inicio")}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-amber-900">Editor de Inicio</h2>
+            <button
+              type="button"
+              onClick={() => setPaletteModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+            >
+              <Palette size={14} />
+              Configurar paleta del sitio
+            </button>
+          </div>
+          {renderPanelBackgroundEditor("inicio")}
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm">
               <span className="text-zinc-700">Nombre del sitio</span>
@@ -480,13 +809,171 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 }
               />
             </label>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 md:col-span-2">
+              <p className="text-sm font-semibold text-amber-900">Estilo visual del Hero</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Define paleta de degradé y/o imagen de fondo con overlay profesional.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="text-xs">
+                  <span className="text-zinc-600">Color inicial</span>
+                  <input
+                    type="color"
+                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
+                    value={content.brand.heroGradientFrom || "#2f5a3f"}
+                    onChange={(event) =>
+                      setContent((prev) => ({
+                        ...prev,
+                        brand: { ...prev.brand, heroGradientFrom: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className="text-xs">
+                  <span className="text-zinc-600">Color medio</span>
+                  <input
+                    type="color"
+                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
+                    value={content.brand.heroGradientVia || "#5a3515"}
+                    onChange={(event) =>
+                      setContent((prev) => ({
+                        ...prev,
+                        brand: { ...prev.brand, heroGradientVia: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+                <label className="text-xs">
+                  <span className="text-zinc-600">Color final</span>
+                  <input
+                    type="color"
+                    className="mt-1 h-10 w-full rounded-md border border-amber-200"
+                    value={content.brand.heroGradientTo || "#2b1a0f"}
+                    onChange={(event) =>
+                      setContent((prev) => ({
+                        ...prev,
+                        brand: { ...prev.brand, heroGradientTo: event.target.value },
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <label className="mt-3 block text-xs">
+                <span className="text-zinc-600">Intensidad del overlay ({Math.round((content.brand.heroOverlayOpacity ?? 0.55) * 100)}%)</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="mt-2 w-full"
+                  value={Math.round((content.brand.heroOverlayOpacity ?? 0.55) * 100)}
+                  onChange={(event) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      brand: {
+                        ...prev.brand,
+                        heroOverlayOpacity: Number(event.target.value) / 100,
+                      },
+                    }))
+                  }
+                />
+              </label>
+
+              <div className="mt-3 rounded-xl border border-dashed border-amber-300 bg-white p-3">
+                <input
+                  ref={heroBackgroundFileRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/webp,image/png"
+                  className="hidden"
+                  onChange={(event) =>
+                    setHeroBackgroundFile(event.target.files?.[0] ?? null)
+                  }
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => heroBackgroundFileRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+                  >
+                    <Upload size={14} />
+                    Elegir imagen de fondo
+                  </button>
+                  <button
+                    type="button"
+                    disabled={uploadingHeroBackground}
+                    onClick={submitHeroBackgroundUpload}
+                    className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-60"
+                  >
+                    {uploadingHeroBackground ? "Subiendo..." : "Subir imagen Hero"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setContent((prev) => ({
+                        ...prev,
+                        brand: {
+                          ...prev.brand,
+                          heroBackgroundImageUrl: "",
+                          heroBackgroundPublicId: "",
+                        },
+                      }))
+                    }
+                    className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">
+                  {heroBackgroundFile?.name ||
+                    content.brand.heroBackgroundImageUrl ||
+                    "Sin imagen de fondo seleccionada"}
+                </p>
+              </div>
+
+              <div
+                className="mt-3 h-32 rounded-xl border border-amber-100 bg-cover bg-center"
+                style={{
+                  backgroundImage: content.brand.heroBackgroundImageUrl
+                    ? `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%), url(${content.brand.heroBackgroundImageUrl})`
+                    : `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%)`,
+                  backgroundBlendMode: content.brand.heroBackgroundImageUrl ? "overlay" : "normal",
+                }}
+              />
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-white p-4 md:col-span-2">
+              <p className="text-sm font-semibold text-amber-900">Paleta activa del sitio</p>
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {(
+                  [
+                    "sitePrimaryColor",
+                    "siteSecondaryColor",
+                    "siteAccentColor",
+                    "siteSurfaceColor",
+                    "siteTextColor",
+                  ] as SiteColorKey[]
+                ).map((field) => (
+                  <div key={field} className="space-y-1">
+                    <p className="text-[11px] text-zinc-600">{siteColorLabels[field]}</p>
+                    <div
+                      className="h-10 rounded-md border border-amber-200"
+                      style={{ backgroundColor: content.brand[field] || "#000000" }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       ) : null}
 
       {activeTab === "secciones" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("secciones")}
+        >
           <h2 className="text-lg font-semibold text-amber-900">Editor de Secciones</h2>
+          {renderPanelBackgroundEditor("secciones")}
           {(Object.keys(content.pages) as PageKey[]).map((pageKey) => (
             <article key={pageKey} className="rounded-xl border border-amber-100 p-4">
               <p className="text-sm font-semibold text-amber-900">{pageLabels[pageKey]}</p>
@@ -519,11 +1006,15 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
       ) : null}
 
       {activeTab === "tarjetas" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("tarjetas")}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-amber-900">Tarjetas del Home</h2>
             <p className="text-xs text-zinc-500">Estilo catálogo con fondo editable</p>
           </div>
+          {renderPanelBackgroundEditor("tarjetas")}
           {content.homeEventTypes.map((card, index) => (
             <article key={card.href} className="rounded-xl border border-amber-100 p-4">
               <div className="grid gap-4 md:grid-cols-[160px_1fr]">
@@ -608,7 +1099,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
       ) : null}
 
       {activeTab === "galeria" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("galeria")}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-amber-900">Galería</h2>
             <button
@@ -620,6 +1114,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               Subir nueva foto
             </button>
           </div>
+          {renderPanelBackgroundEditor("galeria")}
 
           <div className="grid gap-3 md:grid-cols-2">
             {content.gallery.map((item, index) => (
@@ -685,7 +1180,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
       ) : null}
 
       {activeTab === "testimonios" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("testimonios")}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-amber-900">Testimonios</h2>
             <button
@@ -696,6 +1194,7 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               Agregar testimonio
             </button>
           </div>
+          {renderPanelBackgroundEditor("testimonios")}
           <div className="grid gap-3">
             {content.testimonials.map((item, index) => (
               <article key={item.id} className="rounded-xl border border-amber-100 p-3">
@@ -749,8 +1248,12 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
       ) : null}
 
       {activeTab === "contacto" ? (
-        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+        <section
+          className="space-y-4 rounded-xl border border-amber-100 p-5"
+          style={getPanelContainerStyle("contacto")}
+        >
           <h2 className="text-lg font-semibold text-amber-900">Contacto y redes</h2>
+          {renderPanelBackgroundEditor("contacto")}
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-sm">
               <span className="text-zinc-700">WhatsApp</span>
@@ -765,6 +1268,87 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 }
               />
             </label>
+          </div>
+        </section>
+      ) : null}
+        </>
+      ) : null}
+
+      {activeMainTab === "estadisticas" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <h2 className="text-lg font-semibold text-amber-900">Estadísticas del contenido</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <article className="rounded-xl border border-amber-100 bg-amber-50/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Última actualización</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">
+                {new Date(content.updatedAt).toISOString().slice(0, 19).replace("T", " ")}
+              </p>
+            </article>
+            <article className="rounded-xl border border-amber-100 bg-amber-50/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Testimonios activos</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">{activeTestimonials}</p>
+            </article>
+            <article className="rounded-xl border border-amber-100 bg-amber-50/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Fotos cargadas</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">{content.gallery.length}</p>
+            </article>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <article className="rounded-xl border border-amber-100 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Páginas activas</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">
+                {Object.values(content.pages).filter((page) => page.enabled).length}/
+                {Object.values(content.pages).length}
+              </p>
+            </article>
+            <article className="rounded-xl border border-amber-100 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Tarjetas Home</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">
+                {content.homeEventTypes.length}
+              </p>
+            </article>
+            <article className="rounded-xl border border-amber-100 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Badges de confianza</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">
+                {content.trustBadges.length}
+              </p>
+            </article>
+            <article className="rounded-xl border border-amber-100 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Total estadísticas</p>
+              <p className="mt-1 text-sm font-semibold text-amber-900">{content.stats.length}</p>
+            </article>
+          </div>
+        </section>
+      ) : null}
+
+      {activeMainTab === "calendario" ? (
+        <section className="space-y-4 rounded-xl border border-amber-100 bg-white p-5">
+          <h2 className="text-lg font-semibold text-amber-900">Calendario</h2>
+          <p className="text-sm text-zinc-600">
+            Vista rápida mensual para planificación interna. Puedes usarlo para organizar visitas,
+            reuniones y fechas de eventos.
+          </p>
+          <div className="grid grid-cols-7 gap-2 text-center text-xs">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
+              <p key={day} className="rounded-md bg-amber-100 px-2 py-1 font-semibold text-amber-900">
+                {day}
+              </p>
+            ))}
+            {Array.from({ length: 35 }).map((_, index) => (
+              <div
+                key={`day-${index + 1}`}
+                className="min-h-14 rounded-md border border-amber-100 bg-amber-50/30 p-1 text-left"
+              >
+                <p className="text-[11px] text-zinc-600">{index + 1}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl border border-amber-100 bg-amber-50/30 p-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Notas rápidas</p>
+            <p className="mt-2 text-sm text-zinc-700">
+              Integraremos eventos reales cuando definas si quieres sincronizar con Google Calendar
+              o mantener este calendario manual.
+            </p>
           </div>
         </section>
       ) : null}
@@ -962,6 +1546,119 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
             >
               {uploadingGalleryReplace ? "Subiendo..." : "Actualizar foto"}
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {paletteModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div className="w-full max-w-4xl rounded-2xl border border-amber-100 bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-amber-900">Paleta global del sitio</h3>
+              <button
+                type="button"
+                onClick={() => setPaletteModalOpen(false)}
+                className="rounded-full border border-amber-300 p-2 text-amber-900 hover:bg-amber-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-sm text-zinc-600">
+              Elige el color a editar y luego haz clic en cualquier tono de la paleta grande.
+            </p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-5">
+              {(Object.keys(siteColorLabels) as SiteColorKey[]).map((field) => (
+                <label
+                  key={field}
+                  className={`rounded-xl border p-3 ${
+                    paletteTarget === field
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-amber-100 bg-white"
+                  }`}
+                >
+                  <span className="mb-2 block text-xs font-medium text-zinc-700">
+                    {siteColorLabels[field]}
+                  </span>
+                  <input
+                    type="radio"
+                    name="paletteTarget"
+                    checked={paletteTarget === field}
+                    onChange={() => setPaletteTarget(field)}
+                    className="sr-only"
+                  />
+                  <input
+                    type="color"
+                    className="h-10 w-full rounded-md border border-amber-200"
+                    value={content.brand[field] || "#000000"}
+                    onChange={(event) => updateSiteColor(field, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Paleta amplia (52 colores)
+              </p>
+              <div className="mt-3 grid grid-cols-8 gap-2 sm:grid-cols-10 md:grid-cols-13">
+                {largeColorPalette.map((color) => (
+                  <button
+                    key={`${paletteTarget}-${color}`}
+                    type="button"
+                    onClick={() => updateSiteColor(paletteTarget, color)}
+                    title={`Aplicar ${color} a ${siteColorLabels[paletteTarget]}`}
+                    className="h-8 w-8 rounded-md border border-white/60 shadow-sm hover:scale-105"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-amber-100 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Vista rápida
+              </p>
+              <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200">
+                <div
+                  className="px-4 py-3 text-white"
+                  style={{
+                    background: `linear-gradient(120deg, ${content.brand.sitePrimaryColor || "#4a2a0a"} 0%, ${content.brand.siteSecondaryColor || "#8a4b1f"} 100%)`,
+                  }}
+                >
+                  Encabezado y botones principales
+                </div>
+                <div
+                  className="px-4 py-4"
+                  style={{
+                    backgroundColor: content.brand.siteSurfaceColor || "#f7f5ef",
+                    color: content.brand.siteTextColor || "#1f2937",
+                  }}
+                >
+                  <p className="text-sm">
+                    Texto general del sitio con color de acento para detalles.
+                  </p>
+                  <div className="mt-3 inline-flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: content.brand.siteAccentColor || "#b66a2f" }}
+                    />
+                    <span className="text-xs">Acento visual</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPaletteModalOpen(false)}
+                className="rounded-full border border-amber-300 px-4 py-2 text-sm text-amber-900 hover:bg-amber-100"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
