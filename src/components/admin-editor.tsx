@@ -3,7 +3,7 @@
 import { ImagePlus, Palette, Pencil, Upload, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AdminEditorPanelStyle, EventCategory, SiteContent } from "@/types/content";
 
@@ -174,6 +174,42 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     () => content.testimonials.filter((item) => item.enabled).length,
     [content.testimonials],
   );
+  const galleryUploadPreviewUrl = useMemo(
+    () => (galleryUploadFile ? URL.createObjectURL(galleryUploadFile) : ""),
+    [galleryUploadFile],
+  );
+  const cardUploadPreviewUrl = useMemo(
+    () => (cardUploadFile ? URL.createObjectURL(cardUploadFile) : ""),
+    [cardUploadFile],
+  );
+  const galleryReplacePreviewUrl = useMemo(
+    () => (galleryReplaceFile ? URL.createObjectURL(galleryReplaceFile) : ""),
+    [galleryReplaceFile],
+  );
+  const heroBackgroundPreviewUrl = useMemo(
+    () => (heroBackgroundFile ? URL.createObjectURL(heroBackgroundFile) : ""),
+    [heroBackgroundFile],
+  );
+  const panelBackgroundPreviewUrl = useMemo(
+    () => (panelBackgroundFile ? URL.createObjectURL(panelBackgroundFile) : ""),
+    [panelBackgroundFile],
+  );
+
+  useEffect(() => () => {
+    if (galleryUploadPreviewUrl) URL.revokeObjectURL(galleryUploadPreviewUrl);
+  }, [galleryUploadPreviewUrl]);
+  useEffect(() => () => {
+    if (cardUploadPreviewUrl) URL.revokeObjectURL(cardUploadPreviewUrl);
+  }, [cardUploadPreviewUrl]);
+  useEffect(() => () => {
+    if (galleryReplacePreviewUrl) URL.revokeObjectURL(galleryReplacePreviewUrl);
+  }, [galleryReplacePreviewUrl]);
+  useEffect(() => () => {
+    if (heroBackgroundPreviewUrl) URL.revokeObjectURL(heroBackgroundPreviewUrl);
+  }, [heroBackgroundPreviewUrl]);
+  useEffect(() => () => {
+    if (panelBackgroundPreviewUrl) URL.revokeObjectURL(panelBackgroundPreviewUrl);
+  }, [panelBackgroundPreviewUrl]);
 
   async function saveContent(next: SiteContent): Promise<boolean> {
     setIsSaving(true);
@@ -470,6 +506,28 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
     }));
   }
 
+  function getCardMediaSettings(index: number) {
+    const card = content.homeEventTypes[index];
+    return {
+      positionX: card?.backgroundPositionX ?? 50,
+      positionY: card?.backgroundPositionY ?? 50,
+      zoom: card?.backgroundZoom ?? 1,
+    };
+  }
+
+  function updateCardMediaSettings(
+    index: number,
+    patch: Partial<{ backgroundPositionX: number; backgroundPositionY: number; backgroundZoom: number }>,
+  ) {
+    setContent((prev) => {
+      const next = [...prev.homeEventTypes];
+      const current = next[index];
+      if (!current) return prev;
+      next[index] = { ...current, ...patch };
+      return { ...prev, homeEventTypes: next };
+    });
+  }
+
   function getPanelStyle(tabId: AdminTab): Required<AdminEditorPanelStyle> {
     const style = content.adminEditor?.panelStyles?.[tabId] ?? {};
     return {
@@ -635,10 +693,14 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
         <div
           className="mt-3 h-28 rounded-xl border border-amber-100 bg-cover bg-center"
           style={{
-            backgroundImage: style.backgroundImageUrl
-              ? `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%), url(${style.backgroundImageUrl})`
+            backgroundImage:
+              (panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl
+                ? `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%), url(${(panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl})`
               : `linear-gradient(135deg, ${style.gradientFrom} 0%, ${style.gradientVia} 48%, ${style.gradientTo} 100%)`,
-            backgroundBlendMode: style.backgroundImageUrl ? "overlay" : "normal",
+            backgroundBlendMode:
+              (panelBackgroundTarget === tabId && panelBackgroundPreviewUrl) || style.backgroundImageUrl
+                ? "overlay"
+                : "normal",
           }}
         />
       </div>
@@ -934,10 +996,13 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               <div
                 className="mt-3 h-32 rounded-xl border border-amber-100 bg-cover bg-center"
                 style={{
-                  backgroundImage: content.brand.heroBackgroundImageUrl
-                    ? `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%), url(${content.brand.heroBackgroundImageUrl})`
+                  backgroundImage: (heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl)
+                    ? `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%), url(${heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl})`
                     : `linear-gradient(135deg, ${content.brand.heroGradientFrom || "#2f5a3f"} 0%, ${content.brand.heroGradientVia || "#5a3515"} 48%, ${content.brand.heroGradientTo || "#2b1a0f"} 100%)`,
-                  backgroundBlendMode: content.brand.heroBackgroundImageUrl ? "overlay" : "normal",
+                  backgroundBlendMode:
+                    heroBackgroundPreviewUrl || content.brand.heroBackgroundImageUrl
+                      ? "overlay"
+                      : "normal",
                 }}
               />
             </div>
@@ -1017,6 +1082,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
           {renderPanelBackgroundEditor("tarjetas")}
           {content.homeEventTypes.map((card, index) => (
             <article key={card.href} className="rounded-xl border border-amber-100 p-4">
+              {(() => {
+                const media = getCardMediaSettings(index);
+                return (
+                  <>
               <div className="grid gap-4 md:grid-cols-[160px_1fr]">
                 <div className="relative h-28 overflow-hidden rounded-lg border border-amber-100 bg-amber-50">
                   {card.backgroundImageUrl ? (
@@ -1025,6 +1094,10 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                       alt={`Fondo ${card.title}`}
                       fill
                       className="object-cover"
+                      style={{
+                        objectPosition: `${media.positionX}% ${media.positionY}%`,
+                        transform: `scale(${media.zoom})`,
+                      }}
                       sizes="160px"
                     />
                   ) : null}
@@ -1086,6 +1159,56 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   </label>
                 </div>
               </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <label className="text-xs">
+                  <span className="text-zinc-600">Posición horizontal ({Math.round(media.positionX)}%)</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="mt-1 w-full"
+                    value={media.positionX}
+                    onChange={(event) =>
+                      updateCardMediaSettings(index, {
+                        backgroundPositionX: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="text-xs">
+                  <span className="text-zinc-600">Posición vertical ({Math.round(media.positionY)}%)</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="mt-1 w-full"
+                    value={media.positionY}
+                    onChange={(event) =>
+                      updateCardMediaSettings(index, {
+                        backgroundPositionY: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="text-xs">
+                  <span className="text-zinc-600">Zoom ({media.zoom.toFixed(2)}x)</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={2}
+                    step={0.05}
+                    className="mt-1 w-full"
+                    value={media.zoom}
+                    onChange={(event) =>
+                      updateCardMediaSettings(index, {
+                        backgroundZoom: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
               <button
                 type="button"
                 onClick={() => setCardModalIndex(index)}
@@ -1093,6 +1216,9 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               >
                 Reemplazar fondo con modal
               </button>
+                  </>
+                );
+              })()}
             </article>
           ))}
         </section>
@@ -1430,6 +1556,18 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                   {galleryUploadFile?.name || "Sin archivo seleccionado"}
                 </p>
               </div>
+              {galleryUploadPreviewUrl ? (
+                <div className="overflow-hidden rounded-xl border border-amber-100">
+                  <Image
+                    src={galleryUploadPreviewUrl}
+                    alt="Vista previa galería"
+                    unoptimized
+                    width={1200}
+                    height={700}
+                    className="h-44 w-full object-cover"
+                  />
+                </div>
+              ) : null}
 
               <button
                 type="button"
@@ -1487,6 +1625,93 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
               </p>
             </div>
 
+            {cardModalIndex !== null ? (
+              (() => {
+                const media = getCardMediaSettings(cardModalIndex);
+                const previewUrl =
+                  cardUploadPreviewUrl || content.homeEventTypes[cardModalIndex]?.backgroundImageUrl || "";
+                return (
+                  <>
+                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                      <label className="text-xs">
+                        <span className="text-zinc-600">
+                          Posición horizontal ({Math.round(media.positionX)}%)
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="mt-1 w-full"
+                          value={media.positionX}
+                          onChange={(event) =>
+                            updateCardMediaSettings(cardModalIndex, {
+                              backgroundPositionX: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="text-xs">
+                        <span className="text-zinc-600">
+                          Posición vertical ({Math.round(media.positionY)}%)
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="mt-1 w-full"
+                          value={media.positionY}
+                          onChange={(event) =>
+                            updateCardMediaSettings(cardModalIndex, {
+                              backgroundPositionY: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="text-xs">
+                        <span className="text-zinc-600">Zoom ({media.zoom.toFixed(2)}x)</span>
+                        <input
+                          type="range"
+                          min={1}
+                          max={2}
+                          step={0.05}
+                          className="mt-1 w-full"
+                          value={media.zoom}
+                          onChange={(event) =>
+                            updateCardMediaSettings(cardModalIndex, {
+                              backgroundZoom: Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-3 overflow-hidden rounded-xl border border-amber-100 bg-zinc-900">
+                      {previewUrl ? (
+                        <div className="relative h-48">
+                          <Image
+                            src={previewUrl}
+                            alt="Vista previa del fondo de tarjeta"
+                            unoptimized
+                            fill
+                            className="object-cover"
+                            style={{
+                              objectPosition: `${media.positionX}% ${media.positionY}%`,
+                              transform: `scale(${media.zoom})`,
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-48 items-center justify-center text-sm text-zinc-300">
+                          Aun no hay imagen para previsualizar.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()
+            ) : null}
+
             <button
               type="button"
               disabled={uploadingCard}
@@ -1537,6 +1762,22 @@ export function AdminEditor({ initialContent }: AdminEditorProps) {
                 {galleryReplaceFile?.name || "Sin archivo seleccionado"}
               </p>
             </div>
+            {galleryReplacePreviewUrl || (galleryReplaceIndex !== null && content.gallery[galleryReplaceIndex]?.imageUrl) ? (
+              <div className="mt-3 overflow-hidden rounded-xl border border-amber-100">
+                <Image
+                  src={
+                    galleryReplacePreviewUrl ||
+                    content.gallery[galleryReplaceIndex!]?.imageUrl ||
+                    ""
+                  }
+                  alt="Vista previa reemplazo galería"
+                  unoptimized
+                  width={1200}
+                  height={700}
+                  className="h-44 w-full object-cover"
+                />
+              </div>
+            ) : null}
 
             <button
               type="button"
