@@ -19,7 +19,12 @@ export function EventCards({ items }: EventCardsProps) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((item) => (
+      {items.map((item) => {
+        const positionX = item.backgroundPositionX ?? 50;
+        const positionY = item.backgroundPositionY ?? 50;
+        const zoom = item.backgroundZoom ?? 1;
+
+        return (
         <article
           key={item.title}
           className="group soft-shadow relative overflow-hidden rounded-2xl border border-amber-100 bg-white transition hover:-translate-y-1 hover:border-amber-300"
@@ -31,7 +36,11 @@ export function EventCards({ items }: EventCardsProps) {
                   src={item.backgroundImageUrl}
                   alt={`Fondo ${item.title}`}
                   fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
+                  className="object-cover transition duration-500"
+                  style={{
+                    objectPosition: `${positionX}% ${positionY}%`,
+                    transform: `scale(${zoom})`,
+                  }}
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10" />
@@ -74,7 +83,8 @@ export function EventCards({ items }: EventCardsProps) {
             </div>
           )}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }

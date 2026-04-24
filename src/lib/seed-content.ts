@@ -34,6 +34,9 @@ export const seedContent: SiteContent = {
       href: "/matrimonios",
       backgroundImageUrl:
         "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=1200&auto=format&fit=crop",
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundZoom: 1,
     },
     {
       title: "Eventos corporativos",
@@ -41,6 +44,9 @@ export const seedContent: SiteContent = {
       href: "/eventos-corporativos",
       backgroundImageUrl:
         "https://images.unsplash.com/photo-1515169067868-5387ec356754?q=80&w=1200&auto=format&fit=crop",
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundZoom: 1,
     },
     {
       title: "Celebraciones sociales",
@@ -48,6 +54,9 @@ export const seedContent: SiteContent = {
       href: "/celebraciones-sociales",
       backgroundImageUrl:
         "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?q=80&w=1200&auto=format&fit=crop",
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundZoom: 1,
     },
     {
       title: "Activaciones de marca",
@@ -55,6 +64,9 @@ export const seedContent: SiteContent = {
       href: "/activaciones-de-marca",
       backgroundImageUrl:
         "https://images.unsplash.com/photo-1551818255-e6e10975bc17?q=80&w=1200&auto=format&fit=crop",
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundZoom: 1,
     },
   ],
   pages: {
